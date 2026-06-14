@@ -78,15 +78,21 @@ em{font-style:italic;color:var(--accent-deep)}
 .section-title{font-size:clamp(2.2rem,6vw,4.4rem);line-height:1.02;letter-spacing:-.01em;color:var(--ink)}
 .section-lead{margin-top:18px;color:var(--ink-soft);max-width:540px;font-size:1.08rem}
 
-/* ---- trek grid ---- */
-.trek-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:clamp(20px,3vw,40px);padding:0 clamp(20px,6vw,90px) clamp(80px,10vw,140px);align-items:start}
-@media(max-width:760px){.trek-grid{grid-template-columns:1fr}}
+/* ---- trek grid: ONE centered trek per row ---- */
+.trek-grid{display:flex;flex-direction:column;align-items:center;gap:clamp(48px,9vh,120px);padding:0 clamp(20px,6vw,90px) clamp(90px,12vw,160px)}
 
-/* Card: portrait by default, expands to a wider landscape frame on hover */
-.trek-card{position:relative;display:block;border-radius:var(--card-radius);overflow:hidden;aspect-ratio:4/5;background:var(--surface);box-shadow:var(--shadow-md);transform:translateZ(0);
-  transition:aspect-ratio .9s var(--ease),box-shadow .6s var(--ease),transform .6s var(--ease);will-change:aspect-ratio,transform}
-.trek-card:hover,.trek-card:focus-visible{aspect-ratio:16/10;box-shadow:var(--shadow-lg);transform:translateY(-4px)}
-@media(max-width:760px){.trek-card:hover,.trek-card:focus-visible{aspect-ratio:16/11}}
+/* Card: a centered portrait at rest; expands wide into the landscape frame on hover.
+   We animate max-width + aspect-ratio so it smoothly spreads across the screen. */
+.trek-card{position:relative;display:block;width:100%;max-width:min(430px,82vw);margin:0 auto;
+  border-radius:var(--card-radius);overflow:hidden;aspect-ratio:4/5;background:var(--surface);box-shadow:var(--shadow-md);transform:translateZ(0);
+  transition:max-width 1s var(--ease),aspect-ratio 1s var(--ease),box-shadow .7s var(--ease),transform .7s var(--ease);
+  will-change:max-width,aspect-ratio,transform}
+/* expand to nearly the full screen width in the landscape ratio of the back image */
+.trek-card:hover,.trek-card:focus-visible{max-width:min(1180px,94vw);aspect-ratio:16/9;box-shadow:var(--shadow-lg);transform:translateY(-6px)}
+@media(max-width:760px){
+  .trek-card{max-width:min(360px,88vw)}
+  .trek-card:hover,.trek-card:focus-visible{max-width:96vw;aspect-ratio:4/3}
+}
 
 .trek-card .imgwrap{position:absolute;inset:0}
 .trek-card img{position:absolute;inset:0;width:100%;height:100%;will-change:transform,opacity}
