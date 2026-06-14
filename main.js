@@ -79,13 +79,16 @@
   window.addEventListener('resize', onScroll, {passive:true});
   onScroll();
 
-  /* ---------- cursor glow + magnetic buttons (desktop only) ---------- */
-  if(window.matchMedia('(hover:hover) and (pointer:fine)').matches){
-    var glow = document.querySelector('.cursor-glow');
-    var gx=0,gy=0,cx=0,cy=0;
-    window.addEventListener('mousemove', function(e){ gx=e.clientX; gy=e.clientY; }, {passive:true});
-    (function loop(){ cx += (gx-cx)*0.15; cy += (gy-cy)*0.15; if(glow) glow.style.transform='translate('+cx+'px,'+cy+'px)'; requestAnimationFrame(loop); })();
+  /* ---------- sticky header state ---------- */
+  var header = document.querySelector('.site-header');
+  if(header){
+    var setHeader = function(){ header.classList.toggle('scrolled', window.pageYOffset > 40); };
+    window.addEventListener('scroll', setHeader, {passive:true});
+    setHeader();
+  }
 
+  /* ---------- magnetic buttons (desktop only) ---------- */
+  if(window.matchMedia('(hover:hover) and (pointer:fine)').matches){
     document.querySelectorAll('.magnetic').forEach(function(btn){
       btn.addEventListener('mousemove', function(e){
         var r = btn.getBoundingClientRect();
