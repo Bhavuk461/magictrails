@@ -1,0 +1,27 @@
+# Deploys the static MagicTrails site to GitLab Pages.
+# All site files live at the repo root, so we copy them (and the trek
+# image folders) into the `public/` directory that Pages serves.
+
+pages:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - mkdir -p public
+    # copy everything except build/VCS metadata into public/
+    - >
+      cp -r
+      index.html trek.html
+      styles.css trek.css
+      data.js main.js trek.js
+      "Buran ghati" "Chandrashila Tungnath" "Kuari pass trek" "Roopkund trek"
+      public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    # Don't run in merge request pipelines (would otherwise be an empty,
+    # failing pipeline since this is the only job).
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    # Deploy only on the default branch (also triggered by mirror pushes).
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'

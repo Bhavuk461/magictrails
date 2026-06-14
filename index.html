@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="MagicTrails - Curated Himalayan trekking experiences. Chopta Tungnath, Buran Ghati, Roopkund and Kuari Pass." />
+  <title>MagicTrails — Himalayan Treks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="cursor-glow" aria-hidden="true"></div>
+  <div class="scroll-progress" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a href="index.html" class="brand">
+      <span class="brand-mark">▲</span>
+      <span class="brand-name">MagicTrails</span>
+    </a>
+    <nav class="site-nav">
+      <a href="#treks">Treks</a>
+      <a href="#about">Story</a>
+      <a href="#contact" class="nav-cta magnetic">Plan a trip</a>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg parallax" data-speed="0.25" style="background-image:url('Roopkund%20trek/back.webp')"></div>
+    <div class="hero-veil"></div>
+    <div class="hero-content">
+      <p class="hero-kicker reveal">Himalaya · India</p>
+      <h1 class="hero-title kinetic">
+        <span class="line"><span>Walk</span> <span>where</span></span>
+        <span class="line"><span>the</span> <em>mountains</em></span>
+        <span class="line"><span>still</span> <span>whisper.</span></span>
+      </h1>
+      <p class="hero-sub reveal">Small-group, fully supported Himalayan treks. Food, stay and the wild silence of the high country, taken care of.</p>
+      <a href="#treks" class="btn-primary magnetic reveal">Explore the trails</a>
+    </div>
+    <div class="scroll-hint" aria-hidden="true"><span></span>scroll</div>
+  </section>
+
+  <!-- TREKS -->
+  <section id="treks" class="treks">
+    <div class="section-head">
+      <p class="eyebrow reveal">04 Signature trails</p>
+      <h2 class="section-title reveal">Choose your altitude</h2>
+      <p class="section-lead reveal">Hover a card to feel the landscape open up. Tap to read the full journey.</p>
+    </div>
+
+    <div class="trek-grid" id="trek-grid"></div>
+  </section>
+
+  <!-- ABOUT / PARALLAX BREAK -->
+  <section id="about" class="story">
+    <div class="story-bg parallax" data-speed="0.18" style="background-image:url('Buran%20ghati/back.webp')"></div>
+    <div class="story-veil"></div>
+    <div class="story-content">
+      <h2 class="reveal">We don't sell tours.<br/>We hand you a horizon.</h2>
+      <p class="reveal">Every MagicTrails departure is run by people who have slept under these ridgelines a hundred times. Permits, warm meals, dependable tents and guides who read the weather like a second language — all included, so all you carry is wonder.</p>
+      <div class="story-stats">
+        <div class="stat reveal"><span class="num" data-count="4">0</span><span class="lbl">Curated treks</span></div>
+        <div class="stat reveal"><span class="num" data-count="100">0</span><span class="lbl">% supported</span></div>
+        <div class="stat reveal"><span class="num" data-count="5000">0</span><span class="lbl">m+ altitudes</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact" class="contact">
+    <h2 class="reveal">Ready when you are.</h2>
+    <p class="reveal">Drop us a line and we'll craft the trail around your dates.</p>
+    <a href="mailto:hello@magictrails.in" class="btn-primary magnetic reveal">hello@magictrails.in</a>
+  </section>
+
+  <footer class="site-footer">
+    <span>© 2026 MagicTrails</span>
+    <span>Made for the high places.</span>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="main.js" defer></script>
+</body>
+</html>
