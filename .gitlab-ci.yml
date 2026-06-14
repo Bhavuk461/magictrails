@@ -19,4 +19,9 @@ pages:
     paths:
       - public
   rules:
+    # Don't run in merge request pipelines (would otherwise be an empty,
+    # failing pipeline since this is the only job).
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    # Deploy only on the default branch (also triggered by mirror pushes).
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
