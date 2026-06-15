@@ -99,4 +99,22 @@
       btn.addEventListener('mouseleave', function(){ btn.style.transform=''; });
     });
   }
+
+  /* ---------- smooth scroll centering on trek card hover ---------- */
+  if(window.matchMedia('(hover:hover) and (pointer:fine)').matches){
+    var hoverTimer = null;
+    document.querySelectorAll('.trek-card').forEach(function(card){
+      card.addEventListener('mouseenter', function(){
+        clearTimeout(hoverTimer);
+        var target = card;
+        hoverTimer = setTimeout(function(){
+          target.scrollIntoView({ behavior:'smooth', block:'center' });
+        }, 300);
+      });
+      card.addEventListener('mouseleave', function(){
+        clearTimeout(hoverTimer);
+      });
+    });
+  }
+
 })();
