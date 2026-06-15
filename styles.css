@@ -81,17 +81,14 @@ em{font-style:italic;color:var(--accent-deep)}
 /* ---- trek grid: ONE centered trek per row ---- */
 .trek-grid{display:flex;flex-direction:column;align-items:center;gap:clamp(48px,9vh,120px);padding:0 clamp(20px,6vw,90px) clamp(90px,12vw,160px)}
 
-/* Card: a centered portrait at rest; expands wide into the landscape frame on hover.
-   We animate width + height directly (not max-width) for reliable smooth interpolation. */
+/* Card: portrait at rest; JS (WAAPI) animates width+height on hover for a guaranteed
+   smooth expansion. CSS handles box-shadow, lift, and image crossfade only. */
 .trek-card{position:relative;display:block;width:min(430px,82vw);margin:0 auto;
   border-radius:var(--card-radius);overflow:hidden;height:min(538px,102.5vw);background:var(--surface);box-shadow:var(--shadow-md);transform:translateZ(0);
-  transition:width 1s cubic-bezier(.22,1,.36,1),height 1s cubic-bezier(.22,1,.36,1) .08s,box-shadow .7s var(--ease),transform .7s var(--ease);
-  will-change:width,height,transform}
-/* expand to nearly the full screen width in the landscape ratio of the back image */
-.trek-card:hover,.trek-card:focus-visible{width:min(1180px,94vw);height:min(664px,52.9vw);box-shadow:var(--shadow-lg);transform:translateY(-6px)}
+  transition:box-shadow .7s var(--ease),transform .7s var(--ease)}
+.trek-card:hover,.trek-card:focus-visible{box-shadow:var(--shadow-lg);transform:translateY(-6px)}
 @media(max-width:760px){
   .trek-card{width:min(360px,88vw);height:min(450px,110vw)}
-  .trek-card:hover,.trek-card:focus-visible{width:96vw;height:72vw}
 }
 
 .trek-card .imgwrap{position:absolute;inset:0}

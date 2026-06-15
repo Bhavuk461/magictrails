@@ -100,19 +100,72 @@
     });
   }
 
-  /* ---------- smooth scroll centering on trek card hover ---------- */
+  /* ---------- smooth card expansion (WAAPI) + scroll centering ---------- */
   if(window.matchMedia('(hover:hover) and (pointer:fine)').matches){
-    var hoverTimer = null;
+    var EASE = 'cubic-bezier(.22,1,.36,1)';
+    var scrollTimer = null;
+
     document.querySelectorAll('.trek-card').forEach(function(card){
+      var animW = null, animH = null;
+
+      function dims(hover){
+        var mobile = window.innerWidth <= 760;
+        if(hover){
+          return {
+            w: mobile ? window.innerWidth * 0.96 : Math.min(1180, window.innerWidth * 0.94),
+            h: mobile ? window.innerWidth * 0.72 : Math.min(664, window.innerWidth * 0.529)
+          };
+        }
+        return {
+          w: mobile ? Math.min(360, window.innerWidth * 0.88) : Math.min(430, window.innerWidth * 0.82),
+          h: mobile ? Math.min(450, window.innerWidth * 1.10) : Math.min(538, window.innerWidth * 1.025)
+        };
+      }
+
       card.addEventListener('mouseenter', function(){
-        clearTimeout(hoverTimer);
-        var target = card;
-        hoverTimer = setTimeout(function(){
-          target.scrollIntoView({ behavior:'smooth', block:'center' });
-        }, 300);
+        if(animW){ animW.cancel(); animW = null; }
+        if(animH){ animH.cancel(); animH = null; }
+        var rect = card.getBoundingClientRect();
+        var target = dims(true);
+
+        /* width expands first */
+        animW = card.animate(
+          [{ width: rect.width + 'px' }, { width: target.w + 'px' }],
+          { duration: 1000, easing: EASE, fill: 'forwards' }
+        );
+        /* height follows 80ms later for the "unfolding" feel */
+        animH = card.animate(
+          [{ height: rect.height + 'px' }, { height: target.h + 'px' }],
+          { duration: 1000, delay: 80, easing: EASE, fill: 'forwards' }
+        );
+
+        /* smooth scroll to center the card after expansion is visually committed */
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(function(){
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 350);
       });
+
       card.addEventListener('mouseleave', function(){
-        clearTimeout(hoverTimer);
+        clearTimeout(scrollTimer);
+        if(animW){ animW.cancel(); animW = null; }
+        if(animH){ animH.cancel(); animH = null; }
+        var rect = card.getBoundingClientRect();
+        var rest = dims(false);
+
+        animW = card.animate(
+          [{ width: rect.width + 'px' }, { width: rest.w + 'px' }],
+          { duration: 700, easing: EASE, fill: 'forwards' }
+        );
+        animH = card.animate(
+          [{ height: rect.height + 'px' }, { height: rest.h + 'px' }],
+          { duration: 700, easing: EASE, fill: 'forwards' }
+        );
+        /* once collapse finishes, clean up so CSS base values take over */
+        animW.onfinish = function(){
+          if(animW){ animW.cancel(); animW = null; }
+          if(animH){ animH.cancel(); animH = null; }
+        };
       });
     });
   }
