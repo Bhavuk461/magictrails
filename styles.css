@@ -38,8 +38,8 @@ em{font-style:italic;color:var(--accent-deep)}
 .scroll-progress{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--accent),var(--forest));z-index:100}
 
 /* ---- header ---- */
-.site-header{position:fixed;inset:0 0 auto 0;display:flex;align-items:center;justify-content:space-between;padding:18px clamp(20px,5vw,64px);z-index:50;transition:background .4s var(--ease),box-shadow .4s var(--ease),padding .4s var(--ease)}
-.site-header.scrolled{background:rgba(251,246,236,.82);backdrop-filter:blur(12px);box-shadow:var(--shadow-sm);padding:12px clamp(20px,5vw,64px)}
+.site-header{position:fixed;inset:0 0 auto 0;display:flex;align-items:center;justify-content:space-between;padding:18px clamp(20px,5vw,64px);z-index:50;background:rgba(251,246,236,.82);backdrop-filter:blur(12px);box-shadow:var(--shadow-sm);transition:padding .4s var(--ease)}
+.site-header.scrolled{padding:12px clamp(20px,5vw,64px)}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.02em;color:var(--ink)}
 .brand-mark{color:var(--accent);transform:translateY(-1px)}
 .brand-name{font-family:'Fraunces',serif;font-size:1.25rem}
