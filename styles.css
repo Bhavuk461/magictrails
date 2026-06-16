@@ -78,36 +78,50 @@ em{font-style:italic;color:var(--accent-deep)}
 .section-title{font-size:clamp(2.2rem,6vw,4.4rem);line-height:1.02;letter-spacing:-.01em;color:var(--ink)}
 .section-lead{margin-top:18px;color:var(--ink-soft);max-width:540px;font-size:1.08rem}
 
-/* ---- trek grid: ONE centered trek per row ---- */
-.trek-grid{display:flex;flex-direction:column;align-items:center;gap:clamp(48px,9vh,120px);padding:0 clamp(20px,6vw,90px) clamp(90px,12vw,160px)}
+/* ---- trek grid: horizontal flex accordion on desktop ---- */
+.trek-grid{display:flex;flex-direction:row;gap:10px;height:clamp(420px,50vh,600px);padding:0 clamp(20px,4vw,60px) clamp(90px,12vw,160px)}
 
-/* Card: portrait at rest; JS (WAAPI) animates width+height on hover for a guaranteed
-   smooth expansion. CSS handles box-shadow, lift, and image crossfade only. */
-.trek-card{position:relative;display:block;width:min(430px,82vw);margin:0 auto;
-  border-radius:var(--card-radius);overflow:hidden;height:min(538px,102.5vw);background:var(--surface);box-shadow:var(--shadow-md);transform:translateZ(0);
-  transition:box-shadow .7s var(--ease),transform .7s var(--ease)}
-.trek-card:hover,.trek-card:focus-visible{box-shadow:var(--shadow-lg);transform:translateY(-6px)}
+/* Card: flex-based sizing; transitions flex-grow for GPU-friendly accordion expansion */
+.trek-card{position:relative;display:block;flex:1;min-width:0;
+  border-radius:var(--card-radius);overflow:hidden;background:var(--surface);box-shadow:var(--shadow-md);transform:translateZ(0);
+  transition:flex .7s cubic-bezier(.22,1,.36,1),box-shadow .5s var(--ease),filter .5s var(--ease),opacity .5s var(--ease)}
+
+/* Hover choreography — dim all siblings, expand the hovered card */
+.trek-grid:hover .trek-card{flex:.6;filter:brightness(.7) saturate(.6);opacity:.75}
+.trek-grid .trek-card:hover{flex:4;filter:none;opacity:1;box-shadow:var(--shadow-lg)}
+
 @media(max-width:760px){
-  .trek-card{width:min(360px,88vw);height:min(450px,110vw)}
+  .trek-grid{flex-direction:column;height:auto;gap:24px}
+  .trek-card{flex:none!important;width:min(360px,88vw);height:min(450px,110vw);margin:0 auto;filter:none!important;opacity:1!important}
 }
 
 .trek-card .imgwrap{position:absolute;inset:0}
 .trek-card img{position:absolute;inset:0;width:100%;height:100%;will-change:transform,opacity}
-/* title: portrait image — crossfade starts 350ms in so the frame expansion is visible first */
-.trek-card .img-title{z-index:2;object-fit:cover;opacity:1;transform:scale(1);transition:opacity .7s var(--ease) .35s,transform 1s var(--ease) .2s}
-/* back: landscape image — fades in 450ms into the expansion for a clear frame-first → image-second sequence */
-.trek-card .img-back{z-index:1;object-fit:cover;opacity:0;transform:scale(1.06);transition:opacity .8s var(--ease) .45s,transform 1.2s var(--ease) .2s}
-.trek-card:hover .img-title,.trek-card:focus-visible .img-title{opacity:0;transform:scale(1.12)}
+
+/* title: portrait image — visible at rest, fades as card expands */
+.trek-card .img-title{z-index:2;object-fit:cover;opacity:1;transform:scale(1);transition:opacity .6s var(--ease) .15s,transform .8s var(--ease)}
+/* back: landscape image — hidden at rest, revealed on hover */
+.trek-card .img-back{z-index:1;object-fit:cover;opacity:0;transform:scale(1.06);transition:opacity .7s var(--ease) .25s,transform 1s var(--ease)}
+.trek-card:hover .img-title,.trek-card:focus-visible .img-title{opacity:0;transform:scale(1.08)}
 .trek-card:hover .img-back,.trek-card:focus-visible .img-back{opacity:1;transform:scale(1)}
 
+/* Kuari Pass special: portrait back image — Ken Burns zoom instead of crossfade */
+.trek-card[data-ken-burns] .img-title{transition:transform 1.2s var(--ease)}
+.trek-card[data-ken-burns] .img-back{display:none}
+.trek-card[data-ken-burns]:hover .img-title{opacity:1;transform:scale(1.15) translateY(-3%)}
+
 .trek-card .grad{position:absolute;inset:0;z-index:3;background:linear-gradient(180deg,rgba(20,12,2,.10),transparent 38%,rgba(20,12,2,.05) 55%,rgba(20,12,2,.78));transition:background .6s}
-.trek-card .meta{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:clamp(20px,3vw,32px)}
-.trek-card .name{font-family:'Fraunces',serif;color:#fff;font-size:clamp(1.5rem,3vw,2.2rem);line-height:1.04;letter-spacing:-.01em;text-shadow:0 2px 16px rgba(20,12,2,.5)}
-.trek-card .sub{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px;font-size:.86rem;color:#f3e9d8;opacity:.95;text-shadow:0 1px 10px rgba(20,12,2,.5)}
+.trek-card .meta{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:clamp(16px,2.5vw,28px)}
+.trek-card .name{font-family:'Fraunces',serif;color:#fff;font-size:clamp(1.1rem,2vw,2rem);line-height:1.04;letter-spacing:-.01em;text-shadow:0 2px 16px rgba(20,12,2,.5)}
+
+/* Sub + open-hint: hidden on narrow resting cards, revealed on hover with stagger */
+.trek-card .sub{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px;font-size:.82rem;color:#f3e9d8;text-shadow:0 1px 10px rgba(20,12,2,.5);opacity:0;transform:translateY(6px);transition:opacity .4s var(--ease),transform .4s var(--ease)}
 .trek-card .sub .dot{color:#ffcf8c}
-.trek-card .price{position:absolute;top:18px;right:18px;z-index:4;background:rgba(255,248,237,.92);color:var(--accent-deep);border:1px solid var(--line);box-shadow:var(--shadow-sm);padding:7px 14px;border-radius:30px;font-weight:700;font-size:.9rem}
+.trek-card:hover .sub{opacity:.95;transform:translateY(0);transition-delay:.3s}
+.trek-card .price{position:absolute;top:18px;right:18px;z-index:4;background:rgba(255,248,237,.92);color:var(--accent-deep);border:1px solid var(--line);box-shadow:var(--shadow-sm);padding:7px 14px;border-radius:30px;font-weight:700;font-size:.9rem;transition:opacity .4s var(--ease),transform .4s var(--ease)}
 .trek-card .open-hint{margin-top:14px;display:inline-flex;align-items:center;gap:8px;font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;color:#ffd79a;opacity:0;transform:translateY(8px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
-.trek-card:hover .open-hint,.trek-card:focus-visible .open-hint{opacity:1;transform:translateY(0)}
+.trek-card:hover .open-hint,.trek-card:focus-visible .open-hint{opacity:1;transform:translateY(0);transition-delay:.4s}
+
 
 /* ---- story parallax ---- */
 .story{position:relative;padding:clamp(110px,16vw,200px) clamp(20px,6vw,90px);overflow:hidden}

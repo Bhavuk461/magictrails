@@ -14,6 +14,8 @@
       a.href = 'trek.html?t=' + encodeURIComponent(t.slug);
       a.style.transitionDelay = (i*0.07) + 's';
       a.setAttribute('aria-label', t.name + ' trek');
+      /* Kuari Pass has a portrait back image — use Ken Burns zoom instead of crossfade */
+      if(t.slug === 'kuari-pass') a.setAttribute('data-ken-burns','');
       a.innerHTML =
         '<div class="imgwrap">'+
           '<img class="img-back" src="'+back+'" alt="" loading="lazy" decoding="async">'+
@@ -100,72 +102,20 @@
     });
   }
 
-  /* ---------- smooth card expansion (WAAPI) + scroll centering ---------- */
+  /* ---------- scroll-center on card hover (desktop only) ---------- */
   if(window.matchMedia('(hover:hover) and (pointer:fine)').matches){
-    var EASE = 'cubic-bezier(.22,1,.36,1)';
     var scrollTimer = null;
+    var trekGrid = document.getElementById('trek-grid');
 
     document.querySelectorAll('.trek-card').forEach(function(card){
-      var animW = null, animH = null;
-
-      function dims(hover){
-        var mobile = window.innerWidth <= 760;
-        if(hover){
-          return {
-            w: mobile ? window.innerWidth * 0.96 : Math.min(1180, window.innerWidth * 0.94),
-            h: mobile ? window.innerWidth * 0.72 : Math.min(664, window.innerWidth * 0.529)
-          };
-        }
-        return {
-          w: mobile ? Math.min(360, window.innerWidth * 0.88) : Math.min(430, window.innerWidth * 0.82),
-          h: mobile ? Math.min(450, window.innerWidth * 1.10) : Math.min(538, window.innerWidth * 1.025)
-        };
-      }
-
       card.addEventListener('mouseenter', function(){
-        if(animW){ animW.cancel(); animW = null; }
-        if(animH){ animH.cancel(); animH = null; }
-        var rect = card.getBoundingClientRect();
-        var target = dims(true);
-
-        /* width expands first */
-        animW = card.animate(
-          [{ width: rect.width + 'px' }, { width: target.w + 'px' }],
-          { duration: 1000, easing: EASE, fill: 'forwards' }
-        );
-        /* height follows 80ms later for the "unfolding" feel */
-        animH = card.animate(
-          [{ height: rect.height + 'px' }, { height: target.h + 'px' }],
-          { duration: 1000, delay: 80, easing: EASE, fill: 'forwards' }
-        );
-
-        /* smooth scroll to center the card after expansion is visually committed */
         clearTimeout(scrollTimer);
         scrollTimer = setTimeout(function(){
-          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 350);
+          if(trekGrid) trekGrid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 250);
       });
-
       card.addEventListener('mouseleave', function(){
         clearTimeout(scrollTimer);
-        if(animW){ animW.cancel(); animW = null; }
-        if(animH){ animH.cancel(); animH = null; }
-        var rect = card.getBoundingClientRect();
-        var rest = dims(false);
-
-        animW = card.animate(
-          [{ width: rect.width + 'px' }, { width: rest.w + 'px' }],
-          { duration: 700, easing: EASE, fill: 'forwards' }
-        );
-        animH = card.animate(
-          [{ height: rect.height + 'px' }, { height: rest.h + 'px' }],
-          { duration: 700, easing: EASE, fill: 'forwards' }
-        );
-        /* once collapse finishes, clean up so CSS base values take over */
-        animW.onfinish = function(){
-          if(animW){ animW.cancel(); animW = null; }
-          if(animH){ animH.cancel(); animH = null; }
-        };
       });
     });
   }
