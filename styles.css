@@ -81,28 +81,29 @@ em{font-style:italic;color:var(--accent-deep)}
 /* ---- trek grid: 2×2 rows, per-row accordion ---- */
 .trek-grid{display:flex;flex-direction:column;gap:20px;padding:0 clamp(20px,4vw,60px) clamp(90px,12vw,160px)}
 
-/* Each row holds 2 cards side-by-side */
-.trek-row{display:flex;flex-direction:row;gap:14px;height:clamp(340px,40vh,460px);
-  transition:opacity .5s var(--ease),filter .5s var(--ease)}
+/* Each row holds 2 cards side-by-side. Compact rest height for dramatic expansion contrast */
+.trek-row{display:flex;flex-direction:row;gap:14px;height:clamp(280px,32vh,380px);
+  transition:opacity .6s var(--ease),filter .6s var(--ease)}
 
-/* Dim the non-hovered row */
-.trek-grid:hover .trek-row:not(:hover){opacity:.5;filter:brightness(.75) saturate(.5)}
+/* Dim the OTHER row — only when a card is actually being hovered (avoids white flash) */
+.trek-grid:has(.trek-card:hover) .trek-row:not(:has(.trek-card:hover)){opacity:.45;filter:brightness(.7) saturate(.4)}
 
 /* Card: flex accordion within its row; WAAPI handles row height expansion */
 .trek-card{position:relative;display:block;flex:1;min-width:0;
   border-radius:var(--card-radius);overflow:hidden;background:var(--surface);box-shadow:var(--shadow-md);transform:translateZ(0);
   transition:flex .8s cubic-bezier(.22,1,.36,1),box-shadow .5s var(--ease),filter .5s var(--ease),opacity .5s var(--ease)}
 
-/* Per-row hover: dim sibling, expand hovered */
-.trek-row:hover .trek-card{flex:.5;filter:brightness(.65) saturate(.5);opacity:.7}
-.trek-row .trek-card:hover{flex:3;filter:none;opacity:1;box-shadow:var(--shadow-lg)}
+/* Per-row accordion — only when a card in THIS row is hovered */
+.trek-row:has(.trek-card:hover) .trek-card:not(:hover){flex:.4;filter:brightness(.6) saturate(.4);opacity:.65}
+.trek-row .trek-card:hover{flex:4;filter:none;opacity:1;box-shadow:var(--shadow-lg)}
 
 @media(max-width:760px){
   .trek-grid{gap:24px}
   .trek-row{flex-direction:column;height:auto;gap:24px}
-  .trek-row:hover .trek-card{flex:none;filter:none;opacity:1}
+  .trek-row:has(.trek-card:hover) .trek-card:not(:hover){flex:none;filter:none;opacity:1}
   .trek-card{flex:none!important;width:min(360px,88vw);height:min(450px,110vw);margin:0 auto;filter:none!important;opacity:1!important}
 }
+
 
 .trek-card .imgwrap{position:absolute;inset:0}
 .trek-card img{position:absolute;inset:0;width:100%;height:100%;will-change:transform,opacity}

@@ -118,9 +118,10 @@
     document.querySelectorAll('.trek-row').forEach(function(row){
       var heightAnim = null;
 
-      /* Compute resting and expanded row heights responsively */
-      function restH(){ return Math.min(460, window.innerHeight * 0.40); }
-      function expandH(){ return Math.min(560, window.innerHeight * 0.55); }
+      /* Compute resting and expanded row heights responsively.
+         Rest matches CSS clamp(280px,32vh,380px). Expand to ~60vh for dramatic visible growth. */
+      function restH(){ return Math.min(380, window.innerHeight * 0.32); }
+      function expandH(){ return Math.min(680, window.innerHeight * 0.60); }
 
       row.addEventListener('mouseenter', function(){
         if(heightAnim){ heightAnim.cancel(); heightAnim = null; }
@@ -130,7 +131,7 @@
         /* Smoothly grow the row height so the frame visibly expands */
         heightAnim = row.animate(
           [{ height: rect.height + 'px' }, { height: targetH + 'px' }],
-          { duration: 800, easing: EASE, fill: 'forwards' }
+          { duration: 900, easing: EASE, fill: 'forwards' }
         );
 
         /* Scroll-center the hovered row after expansion commits */
