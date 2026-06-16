@@ -53,7 +53,7 @@ em{font-style:italic;color:var(--accent-deep)}
 
 /* ---- hero ---- */
 .hero{position:relative;height:100svh;min-height:620px;display:flex;align-items:center;overflow:hidden}
-.hero-bg{position:absolute;inset:-12% 0;background-size:cover;background-position:center;will-change:transform;transform:scale(1.08)}
+.hero-bg{position:absolute;inset:-22% 0 -2% 0;background-size:cover;background-position:center 95%;will-change:transform;transform:scale(1.08)}
 /* uniform dark neutral overlay */
 .hero-veil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,15,15,.55),rgba(15,15,15,.4))}
 .hero-content{position:relative;z-index:2;padding:0 clamp(20px,6vw,90px);max-width:1100px}
