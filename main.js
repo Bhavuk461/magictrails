@@ -26,8 +26,8 @@
       if(t.slug === 'kuari-pass') a.setAttribute('data-ken-burns','');
       a.innerHTML =
         '<div class="imgwrap">'+
-          '<img class="img-back" src="'+back+'" alt="" loading="lazy" decoding="async">'+
-          '<img class="img-title" src="'+title+'" alt="'+t.name+'" loading="lazy" decoding="async">'+
+          '<img class="img-back" src="'+back+'" alt="">'+
+          '<img class="img-title" src="'+title+'" alt="'+t.name+'">'+
         '</div>'+
         '<div class="grad"></div>'+
         '<span class="price">'+t.price+'</span>'+
@@ -111,52 +111,65 @@
   }
 
   /* ---------- row height expansion (WAAPI) + scroll centering ---------- */
-  if(window.matchMedia('(hover:hover) and (pointer:fine)').matches){
-    var EASE = 'cubic-bezier(.22,1,.36,1)';
-    var scrollTimer = null;
+  var EASE = 'cubic-bezier(.22,1,.36,1)';
+  var scrollTimer = null;
 
-    document.querySelectorAll('.trek-row').forEach(function(row){
-      var heightAnim = null;
+  document.querySelectorAll('.trek-row').forEach(function(row){
+    var heightAnim = null;
 
-      /* Compute resting and expanded row heights responsively.
-         Rest matches CSS clamp(280px,32vh,380px). Expand to ~60vh for dramatic visible growth. */
-      function restH(){ return Math.min(380, window.innerHeight * 0.32); }
-      function expandH(){ return Math.min(680, window.innerHeight * 0.60); }
+    /* Compute resting and expanded row heights responsively.
+       Rest matches CSS clamp(280px,32vh,380px). Expand to ~60vh for dramatic visible growth. */
+    function restH(){ return Math.max(280, Math.min(380, window.innerHeight * 0.32)); }
+    function expandH(){ return Math.max(450, Math.min(680, window.innerHeight * 0.60)); }
 
-      row.addEventListener('mouseenter', function(){
-        if(heightAnim){ heightAnim.cancel(); heightAnim = null; }
-        var rect = row.getBoundingClientRect();
-        var targetH = expandH();
+    row.addEventListener('mouseenter', function(){
+      if (window.innerWidth <= 760) return;
 
-        /* Smoothly grow the row height so the frame visibly expands */
-        heightAnim = row.animate(
-          [{ height: rect.height + 'px' }, { height: targetH + 'px' }],
-          { duration: 900, easing: EASE, fill: 'forwards' }
-        );
+      var currentH = row.getBoundingClientRect().height;
+      if(heightAnim){ heightAnim.cancel(); heightAnim = null; }
+      var targetH = expandH();
 
-        /* Scroll-center the hovered row after expansion commits */
-        clearTimeout(scrollTimer);
-        scrollTimer = setTimeout(function(){
-          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 350);
-      });
+      /* Smoothly grow the row height so the frame visibly expands */
+      heightAnim = row.animate(
+        [{ height: currentH + 'px' }, { height: targetH + 'px' }],
+        { duration: 900, easing: EASE, fill: 'forwards' }
+      );
 
-      row.addEventListener('mouseleave', function(){
-        clearTimeout(scrollTimer);
-        if(heightAnim){ heightAnim.cancel(); heightAnim = null; }
-        var rect = row.getBoundingClientRect();
-        var targetH = restH();
-
-        heightAnim = row.animate(
-          [{ height: rect.height + 'px' }, { height: targetH + 'px' }],
-          { duration: 600, easing: EASE, fill: 'forwards' }
-        );
-        /* Clean up when collapse finishes so CSS base values take over */
-        heightAnim.onfinish = function(){
-          if(heightAnim){ heightAnim.cancel(); heightAnim = null; }
-        };
-      });
+      /* Scroll-center the hovered row after expansion commits */
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(function(){
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 350);
     });
-  }
+
+    row.addEventListener('mouseleave', function(){
+      if (window.innerWidth <= 760) return;
+
+      clearTimeout(scrollTimer);
+      var currentH = row.getBoundingClientRect().height;
+      if(heightAnim){ heightAnim.cancel(); heightAnim = null; }
+      var targetH = restH();
+
+      heightAnim = row.animate(
+        [{ height: currentH + 'px' }, { height: targetH + 'px' }],
+        { duration: 600, easing: EASE, fill: 'forwards' }
+      );
+      /* Clean up when collapse finishes so CSS base values take over */
+      heightAnim.onfinish = function(){
+        if(heightAnim){ heightAnim.cancel(); heightAnim = null; }
+      };
+    });
+  });
+
+  /* Cancel active animations when resizing to mobile to let CSS auto-height take over */
+  window.addEventListener('resize', function(){
+    if (window.innerWidth <= 760) {
+      document.querySelectorAll('.trek-row').forEach(function(row){
+        if (typeof row.getAnimations === 'function') {
+          row.getAnimations().forEach(function(anim){ anim.cancel(); });
+        }
+      });
+    }
+  }, {passive:true});
 
 })();
