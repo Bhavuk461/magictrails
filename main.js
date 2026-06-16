@@ -2,11 +2,19 @@
   'use strict';
   var enc = function(p){ return p.split('/').map(encodeURIComponent).join('/'); };
 
-  /* ---------- build trek cards ---------- */
+  /* ---------- build trek cards (grouped into rows of 2) ---------- */
   var grid = document.getElementById('trek-grid');
   if(grid && window.TREKS){
     var frag = document.createDocumentFragment();
+    var row = null;
     window.TREKS.forEach(function(t,i){
+      /* Create a new .trek-row every 2 cards */
+      if(i % 2 === 0){
+        row = document.createElement('div');
+        row.className = 'trek-row';
+        frag.appendChild(row);
+      }
+
       var title = enc(t.folder + '/title.webp');
       var back  = enc(t.folder + '/back.webp');
       var a = document.createElement('a');
@@ -28,7 +36,7 @@
           '<div class="sub"><span>'+t.duration+'</span><span class="dot">\u25CF</span><span>'+t.route+'</span></div>'+
           '<span class="open-hint">View journey \u2192</span>'+
         '</div>';
-      frag.appendChild(a);
+      row.appendChild(a);
     });
     grid.appendChild(frag);
   }
@@ -102,20 +110,50 @@
     });
   }
 
-  /* ---------- scroll-center on card hover (desktop only) ---------- */
+  /* ---------- row height expansion (WAAPI) + scroll centering ---------- */
   if(window.matchMedia('(hover:hover) and (pointer:fine)').matches){
+    var EASE = 'cubic-bezier(.22,1,.36,1)';
     var scrollTimer = null;
-    var trekGrid = document.getElementById('trek-grid');
 
-    document.querySelectorAll('.trek-card').forEach(function(card){
-      card.addEventListener('mouseenter', function(){
+    document.querySelectorAll('.trek-row').forEach(function(row){
+      var heightAnim = null;
+
+      /* Compute resting and expanded row heights responsively */
+      function restH(){ return Math.min(460, window.innerHeight * 0.40); }
+      function expandH(){ return Math.min(560, window.innerHeight * 0.55); }
+
+      row.addEventListener('mouseenter', function(){
+        if(heightAnim){ heightAnim.cancel(); heightAnim = null; }
+        var rect = row.getBoundingClientRect();
+        var targetH = expandH();
+
+        /* Smoothly grow the row height so the frame visibly expands */
+        heightAnim = row.animate(
+          [{ height: rect.height + 'px' }, { height: targetH + 'px' }],
+          { duration: 800, easing: EASE, fill: 'forwards' }
+        );
+
+        /* Scroll-center the hovered row after expansion commits */
         clearTimeout(scrollTimer);
         scrollTimer = setTimeout(function(){
-          if(trekGrid) trekGrid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 250);
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 350);
       });
-      card.addEventListener('mouseleave', function(){
+
+      row.addEventListener('mouseleave', function(){
         clearTimeout(scrollTimer);
+        if(heightAnim){ heightAnim.cancel(); heightAnim = null; }
+        var rect = row.getBoundingClientRect();
+        var targetH = restH();
+
+        heightAnim = row.animate(
+          [{ height: rect.height + 'px' }, { height: targetH + 'px' }],
+          { duration: 600, easing: EASE, fill: 'forwards' }
+        );
+        /* Clean up when collapse finishes so CSS base values take over */
+        heightAnim.onfinish = function(){
+          if(heightAnim){ heightAnim.cancel(); heightAnim = null; }
+        };
       });
     });
   }
