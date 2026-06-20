@@ -2,7 +2,7 @@
   'use strict';
   var enc = function(p){ return p.split('/').map(encodeURIComponent).join('/'); };
 
-  /* ========== CINEMATIC SLIDER ENGINE ========== */
+  /* ========== CINEMATIC SLIDER ENGINE (v2 — expanding cards) ========== */
   var track = document.getElementById('cine-track');
   if(track && window.TREKS){
     var N = window.TREKS.length;
@@ -14,43 +14,32 @@
       var slide = document.createElement('div');
       slide.className = 'cs-slide';
       slide.dataset.index = i;
+
+      /* Split name into per-character spans for staggered animation */
+      var chars = t.name.split('').map(function(c, j){
+        if(c === ' ') return '<span class="cs-char cs-space" style="--d:' + (j * 30) + 'ms">\u00A0</span>';
+        return '<span class="cs-char" style="--d:' + (j * 30) + 'ms">' + c + '</span>';
+      }).join('');
+
       slide.innerHTML =
-        '<div class="cs-bg"><img class="cs-bg__img" src="' + enc(t.folder + '/back.webp') + '" alt="' + t.name + '"></div>' +
-        '<div class="cs-veil"></div>' +
-        '<div class="cs-content">' +
-          '<div class="cs-mask"><span class="cs-kicker">' + t.route + '</span></div>' +
-          '<div class="cs-mask"><h2 class="cs-title">' + t.name + '</h2></div>' +
-          '<div class="cs-mask"><p class="cs-tagline">' + t.tagline + '</p></div>' +
-          '<div class="cs-mask"><div class="cs-meta">' +
-            '<span class="cs-meta__item">' + t.duration + '</span>' +
-            '<span class="cs-meta__dot">\u25CF</span>' +
-            '<span class="cs-meta__item">' + t.price + '</span>' +
-            '<span class="cs-meta__dot">\u25CF</span>' +
-            '<span class="cs-meta__item">' + t.altitude + '</span>' +
-          '</div></div>' +
-          '<div class="cs-mask"><a href="trek.html?t=' + encodeURIComponent(t.slug) + '" class="cs-cta">Discover Location <span class="cs-cta__arrow">\u2192</span></a></div>' +
+        /* The expanding frame — uses title.webp for card, back.webp for fullscreen */
+        '<div class="cs-frame">' +
+          '<img class="cs-frame__card-img" src="' + enc(t.folder + '/title.webp') + '" alt="' + t.name + '">' +
+          '<img class="cs-frame__full-img" src="' + enc(t.folder + '/back.webp') + '" alt="' + t.name + '">' +
+          '<div class="cs-frame__grad"></div>' +
+          '<span class="cs-frame__label">' + t.name + '</span>' +
         '</div>' +
-        '<div class="cs-preview">' +
-          '<img class="cs-preview__img" src="' + enc(t.folder + '/title.webp') + '" alt="' + t.name + '">' +
-          '<span class="cs-preview__label">' + t.name + '</span>' +
+        /* Dark veil for text legibility (only on active) */
+        '<div class="cs-veil"></div>' +
+        /* Trek name — the ONLY text content */
+        '<div class="cs-name-wrap">' +
+          '<a href="trek.html?t=' + encodeURIComponent(t.slug) + '" class="cs-name">' + chars + '</a>' +
         '</div>';
+
       track.appendChild(slide);
     });
 
-    /* ---- Title nav (left side) ---- */
-    var nav = document.createElement('nav');
-    nav.className = 'cs-nav';
-    window.TREKS.forEach(function(t, i){
-      var btn = document.createElement('button');
-      btn.className = 'cs-nav__btn' + (i === 0 ? ' active' : '');
-      btn.dataset.target = i;
-      btn.textContent = t.name;
-      btn.addEventListener('click', function(){ goTo(i); });
-      nav.appendChild(btn);
-    });
-    track.appendChild(nav);
-
-    /* ---- Controls + odometer (bottom-right) ---- */
+    /* ---- Controls + odometer (bottom-left) ---- */
     var controls = document.createElement('div');
     controls.className = 'cs-controls';
     controls.innerHTML =
@@ -71,7 +60,6 @@
 
     /* ---- State machine ---- */
     var slides = track.querySelectorAll('.cs-slide');
-    var navBtns = track.querySelectorAll('.cs-nav__btn');
     var odometerTrack = track.querySelector('.cs-odometer__track');
 
     function assignStates(activeIdx, prevIdx){
@@ -81,28 +69,25 @@
         if(offset === 0)      state = 'active';
         else if(offset === 1) state = 'next-1';
         else if(offset === 2) state = 'next-2';
+        else if(offset === 3) state = 'next-3';
         else                  state = 'hidden';
-        /* The outgoing slide gets 'prev' to trigger its exit animation */
+        /* The outgoing slide gets 'prev' to trigger exit animation */
         if(prevIdx !== undefined && i === prevIdx && i !== activeIdx) state = 'prev';
         slides[i].dataset.state = state;
       }
-
-      /* Nav buttons */
-      navBtns.forEach(function(btn, i){
-        btn.classList.toggle('active', i === activeIdx);
-      });
 
       /* Odometer */
       odometerTrack.style.transform = 'translateY(' + (-activeIdx * 1.6) + 'em)';
 
       /* Preview card click handlers */
       slides.forEach(function(s){
-        var preview = s.querySelector('.cs-preview');
+        var frame = s.querySelector('.cs-frame');
         var idx = +s.dataset.index;
-        if(s.dataset.state === 'next-1' || s.dataset.state === 'next-2'){
-          preview.onclick = function(e){ e.preventDefault(); goTo(idx); };
+        var st = s.dataset.state;
+        if(st === 'next-1' || st === 'next-2' || st === 'next-3'){
+          frame.onclick = function(e){ e.preventDefault(); goTo(idx); };
         } else {
-          preview.onclick = null;
+          frame.onclick = null;
         }
       });
     }
@@ -126,12 +111,17 @@
       current = targetIdx;
       assignStates(current, prev);
 
-      /* Unlock after the longest transition completes */
-      var activeBg = slides[current].querySelector('.cs-bg__img');
-      function unlock(){ activeBg.removeEventListener('transitionend', unlock); isLocked = false; }
-      activeBg.addEventListener('transitionend', unlock);
+      /* Unlock after expansion completes (listen to transitionend on the frame) */
+      var activeFrame = slides[current].querySelector('.cs-frame');
+      function unlock(e){
+        if(e.propertyName === 'width' || e.propertyName === 'height'){
+          activeFrame.removeEventListener('transitionend', unlock);
+          isLocked = false;
+        }
+      }
+      activeFrame.addEventListener('transitionend', unlock);
       /* Safety timeout */
-      setTimeout(function(){ isLocked = false; }, 1600);
+      setTimeout(function(){ isLocked = false; }, 1400);
     }
 
     /* Initial state (no prev index) */
@@ -192,7 +182,6 @@
   if(header){
     function updateHeader(){
       header.classList.toggle('scrolled', window.pageYOffset > 40);
-      /* Dark header when slider is in viewport */
       if(slider){
         var sr = slider.getBoundingClientRect();
         var inSlider = sr.top < 60 && sr.bottom > 60;

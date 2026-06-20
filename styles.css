@@ -73,137 +73,187 @@ em{font-style:italic;color:var(--accent-deep)}
 .magnetic{will-change:transform}
 
 /* ---- cinematic slider ---- */
-.cine-slider{position:relative;height:100svh;min-height:600px;overflow:hidden;background:#0a0806}
+.cine-slider{
+  position:relative;height:100svh;min-height:600px;overflow:hidden;background:#0a0806;
+  --card-w:clamp(170px,15vw,240px);
+  --card-h:clamp(240px,22vw,340px);
+  --card-gap:14px;
+  --card-r:4%;
+  --card-b:14%;
+  --expand-dur:1.1s;
+  --expand-ease:cubic-bezier(.77,0,.175,1);
+}
 .cine-slider__track{position:relative;width:100%;height:100%}
 
 /* -- slide base -- */
 .cs-slide{position:absolute;inset:0;pointer-events:none}
 
-/* -- background images (transform + opacity ONLY) -- */
-.cs-bg{position:absolute;inset:0;overflow:hidden}
-.cs-bg__img{
-  width:100%;height:100%;object-fit:cover;
-  transform:scale(1.08);opacity:0;
-  transition:transform 1.4s cubic-bezier(.16,1,.3,1),opacity 1s cubic-bezier(.16,1,.3,1);
-}
-/* Kuari Pass portrait image — show upper peaks */
-.cs-slide:nth-child(4) .cs-bg__img{object-position:center 30%}
-
-/* -- dark veil for text legibility -- */
-.cs-veil{position:absolute;inset:0;z-index:4;
-  background:linear-gradient(135deg,rgba(10,8,6,.72) 0%,rgba(10,8,6,.35) 40%,transparent 70%);
-  pointer-events:none}
-
-/* -- slide states -- */
-.cs-slide[data-state="active"]{z-index:3;pointer-events:auto}
-.cs-slide[data-state="active"] .cs-bg__img{transform:scale(1);opacity:1}
-
-.cs-slide[data-state="prev"]{z-index:2}
-.cs-slide[data-state="prev"] .cs-bg__img{
-  transform:scale(1.04);opacity:0;
-  transition:transform 1s ease-in,opacity .8s ease-in}
-
-.cs-slide[data-state="next-1"]{z-index:10}
-.cs-slide[data-state="next-2"]{z-index:9}
-.cs-slide[data-state="hidden"]{z-index:1}
-
-/* -- preview cards (positioned with transform, not left/bottom) -- */
-.cs-preview{
+/* -- the frame: single element that morphs from card → fullscreen -- */
+.cs-frame{
   position:absolute;
-  bottom:12%;right:4%;
-  width:clamp(140px,13vw,210px);height:clamp(200px,18vw,300px);
-  border-radius:14px;overflow:hidden;
+  overflow:hidden;
+  border-radius:14px;
   box-shadow:0 8px 32px rgba(0,0,0,.4);
-  cursor:pointer;
-  opacity:0;transform:translateX(120px);
-  transition:transform .9s cubic-bezier(.22,1,.36,1),opacity .6s cubic-bezier(.22,1,.36,1)}
-.cs-preview__img{width:100%;height:100%;object-fit:cover}
-.cs-preview__label{
-  position:absolute;bottom:0;left:0;right:0;
-  padding:10px 14px;
-  background:linear-gradient(transparent,rgba(0,0,0,.7));
-  color:#fff;font-size:.78rem;font-weight:600}
+  transition:
+    top var(--expand-dur) var(--expand-ease),
+    left var(--expand-dur) var(--expand-ease),
+    width var(--expand-dur) var(--expand-ease),
+    height var(--expand-dur) var(--expand-ease),
+    border-radius var(--expand-dur) var(--expand-ease),
+    opacity .6s ease;
+  /* default: hidden off-right */
+  top:calc(100% - var(--card-b) - var(--card-h));
+  left:110%;
+  width:var(--card-w);height:var(--card-h);
+  opacity:0;
+}
+.cs-frame__card-img,.cs-frame__full-img{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  transition:opacity .8s ease;
+}
+/* Card image (title.webp) visible in preview; full image (back.webp) visible fullscreen */
+.cs-frame__card-img{z-index:2;opacity:1}
+.cs-frame__full-img{z-index:1;opacity:0}
+/* Kuari Pass portrait back — show upper peaks */
+.cs-slide:nth-child(4) .cs-frame__full-img{object-position:center 30%}
 
-/* active → preview card is hidden (background showing) */
-.cs-slide[data-state="active"] .cs-preview{opacity:0;transform:scale(1.2);
-  transition:opacity .4s ease-out,transform .6s ease-out}
+/* Card label (on preview cards only) */
+.cs-frame__label{
+  position:absolute;bottom:0;left:0;right:0;z-index:3;
+  padding:12px 16px;
+  background:linear-gradient(transparent,rgba(0,0,0,.65));
+  color:#fff;font-size:.82rem;font-weight:600;letter-spacing:.01em;
+  transition:opacity .4s ease;
+}
+/* Subtle gradient for the frame */
+.cs-frame__grad{
+  position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:linear-gradient(180deg,transparent 50%,rgba(0,0,0,.35));
+  opacity:0;transition:opacity .6s ease;
+}
 
-/* next-1: first preview card (left of pair) */
-.cs-slide[data-state="next-1"] .cs-preview{
-  opacity:1;pointer-events:auto;
-  transform:translateX(calc(-100% - 16px))}
+/* ===== SLIDE STATES ===== */
 
-/* next-2: second preview card (rightmost) */
-.cs-slide[data-state="next-2"] .cs-preview{
-  opacity:1;pointer-events:auto;
-  transform:translateX(0)}
+/* --- ACTIVE: fullscreen --- */
+.cs-slide[data-state="active"]{z-index:5;pointer-events:auto}
+.cs-slide[data-state="active"] .cs-frame{
+  top:0;left:0;width:100%;height:100%;
+  border-radius:0;opacity:1;
+  box-shadow:none;
+}
+.cs-slide[data-state="active"] .cs-frame__card-img{opacity:0}
+.cs-slide[data-state="active"] .cs-frame__full-img{opacity:1}
+.cs-slide[data-state="active"] .cs-frame__label{opacity:0}
+.cs-slide[data-state="active"] .cs-frame__grad{opacity:1}
 
-/* hidden/prev → preview hidden off-screen right */
-.cs-slide[data-state="hidden"] .cs-preview,
-.cs-slide[data-state="prev"] .cs-preview{opacity:0;transform:translateX(120px)}
+/* --- PREV: stays fullscreen underneath, fades out --- */
+.cs-slide[data-state="prev"]{z-index:4}
+.cs-slide[data-state="prev"] .cs-frame{
+  top:0;left:0;width:100%;height:100%;
+  border-radius:0;opacity:0;
+  box-shadow:none;
+  transition:
+    opacity .8s ease .3s;
+}
+.cs-slide[data-state="prev"] .cs-frame__card-img{opacity:0}
+.cs-slide[data-state="prev"] .cs-frame__full-img{opacity:1}
+.cs-slide[data-state="prev"] .cs-frame__label{opacity:0}
 
-/* -- content text (masked reveal) -- */
-.cs-content{
+/* --- NEXT-1: leftmost preview card --- */
+.cs-slide[data-state="next-1"]{z-index:10}
+.cs-slide[data-state="next-1"] .cs-frame{
+  top:calc(100% - var(--card-b) - var(--card-h));
+  left:calc(100% - var(--card-r) - 3 * var(--card-w) - 2 * var(--card-gap));
+  width:var(--card-w);height:var(--card-h);
+  border-radius:14px;opacity:1;cursor:pointer;pointer-events:auto;
+}
+
+/* --- NEXT-2: middle preview card --- */
+.cs-slide[data-state="next-2"]{z-index:9}
+.cs-slide[data-state="next-2"] .cs-frame{
+  top:calc(100% - var(--card-b) - var(--card-h));
+  left:calc(100% - var(--card-r) - 2 * var(--card-w) - 1 * var(--card-gap));
+  width:var(--card-w);height:var(--card-h);
+  border-radius:14px;opacity:1;cursor:pointer;pointer-events:auto;
+}
+
+/* --- NEXT-3: rightmost preview card --- */
+.cs-slide[data-state="next-3"]{z-index:8}
+.cs-slide[data-state="next-3"] .cs-frame{
+  top:calc(100% - var(--card-b) - var(--card-h));
+  left:calc(100% - var(--card-r) - 1 * var(--card-w));
+  width:var(--card-w);height:var(--card-h);
+  border-radius:14px;opacity:1;cursor:pointer;pointer-events:auto;
+}
+
+/* --- HIDDEN: off-screen right --- */
+.cs-slide[data-state="hidden"]{z-index:1}
+.cs-slide[data-state="hidden"] .cs-frame{
+  top:calc(100% - var(--card-b) - var(--card-h));
+  left:110%;
+  width:var(--card-w);height:var(--card-h);
+  opacity:0;
+}
+
+/* ===== VEIL (subtle bottom-only, NO left darkening) ===== */
+.cs-veil{position:absolute;inset:0;z-index:6;
+  background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.55));
+  pointer-events:none;opacity:0;transition:opacity .6s ease}
+.cs-slide[data-state="active"] .cs-veil{opacity:1}
+
+/* ===== TREK NAME (the ONLY content — fancy per-character animation) ===== */
+.cs-name-wrap{
   position:absolute;
-  bottom:clamp(60px,10vh,120px);left:clamp(40px,6vw,100px);
-  z-index:5;max-width:600px;pointer-events:none}
-
-.cs-mask{overflow:hidden}
-.cs-mask>*{
+  bottom:clamp(80px,12vh,160px);left:clamp(40px,6vw,100px);
+  z-index:7;pointer-events:none;
+  max-width:clamp(300px,50vw,700px);
+}
+.cs-name{
   display:block;
-  transform:translateY(110%);opacity:0;
-  transition:transform .8s cubic-bezier(.16,1,.3,1),opacity .5s cubic-bezier(.16,1,.3,1)}
+  font-family:'Fraunces',Georgia,serif;
+  font-size:clamp(3rem,7.5vw,6.5rem);
+  font-weight:600;
+  line-height:.95;
+  color:#fff7ea;
+  text-shadow:0 4px 30px rgba(0,0,0,.45),0 1px 0 rgba(255,215,154,.15);
+  letter-spacing:-.02em;
+  text-decoration:none;
+  pointer-events:auto;
+  overflow:hidden;
+}
+.cs-name:hover{color:#ffd79a}
 
-/* staggered entrance */
-.cs-slide[data-state="active"] .cs-mask>*{transform:translateY(0);opacity:1}
-.cs-slide[data-state="active"] .cs-content{pointer-events:auto}
-.cs-slide[data-state="active"] .cs-mask:nth-child(1)>*{transition-delay:.35s}
-.cs-slide[data-state="active"] .cs-mask:nth-child(2)>*{transition-delay:.45s}
-.cs-slide[data-state="active"] .cs-mask:nth-child(3)>*{transition-delay:.55s}
-.cs-slide[data-state="active"] .cs-mask:nth-child(4)>*{transition-delay:.65s}
-.cs-slide[data-state="active"] .cs-mask:nth-child(5)>*{transition-delay:.75s}
+/* Per-character staggered reveal */
+.cs-char{
+  display:inline-block;
+  transform:translateY(120%) rotate(8deg);
+  opacity:0;
+  filter:blur(4px);
+  transition:
+    transform .9s cubic-bezier(.16,1,.3,1),
+    opacity .6s cubic-bezier(.16,1,.3,1),
+    filter .7s cubic-bezier(.16,1,.3,1);
+  transition-delay:calc(.45s + var(--d,0s));
+}
+.cs-space{width:.3em} /* visible space between words */
 
-/* exit: text slides down */
-.cs-slide[data-state="prev"] .cs-mask>*{
-  transform:translateY(40px);opacity:0;
-  transition:transform .4s ease-in,opacity .3s ease-in}
+/* Entrance: fly up into place */
+.cs-slide[data-state="active"] .cs-char{
+  transform:translateY(0) rotate(0);
+  opacity:1;filter:blur(0);
+}
 
-/* typography */
-.cs-kicker{letter-spacing:.35em;text-transform:uppercase;font-size:.78rem;color:#ffe7c4;text-shadow:0 1px 10px rgba(0,0,0,.3)}
-.cs-title{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,6vw,5rem);line-height:1;font-weight:500;color:#fff7ea;margin-top:8px;text-shadow:0 4px 20px rgba(0,0,0,.4)}
-.cs-tagline{color:#e8dcc8;font-size:clamp(.95rem,1.3vw,1.15rem);margin-top:14px;max-width:480px;line-height:1.5}
-.cs-meta{display:flex;gap:12px;margin-top:16px;font-size:.85rem;color:#d4c8b4;flex-wrap:wrap}
-.cs-meta__dot{color:var(--accent)}
-.cs-cta{
-  display:inline-flex;align-items:center;gap:10px;margin-top:22px;
-  padding:14px 32px;background:var(--accent);color:#fff;font-weight:600;
-  border-radius:40px;font-size:.95rem;
-  box-shadow:0 12px 32px -10px rgba(185,118,47,.5);
-  transition:background .3s,transform .3s,box-shadow .3s}
-.cs-cta:hover{background:var(--accent-deep);transform:translateY(-2px);box-shadow:0 18px 40px -12px rgba(138,85,32,.6)}
-.cs-cta__arrow{transition:transform .3s}.cs-cta:hover .cs-cta__arrow{transform:translateX(4px)}
+/* Exit: fly up and out */
+.cs-slide[data-state="prev"] .cs-char{
+  transform:translateY(-100%) rotate(-5deg);
+  opacity:0;filter:blur(2px);
+  transition:transform .45s ease-in,opacity .3s ease-in,filter .3s ease-in;
+  transition-delay:calc(var(--d,0s) * .4);
+}
 
-/* -- title navigation (left side) -- */
-.cs-nav{
-  position:absolute;left:clamp(30px,5vw,80px);top:50%;transform:translateY(-50%);
-  z-index:20;display:flex;flex-direction:column;gap:4px}
-.cs-nav__btn{
-  background:none;border:none;
-  color:rgba(255,247,234,.35);font-family:'Fraunces',serif;
-  font-size:clamp(.88rem,1.1vw,1.05rem);text-align:left;
-  padding:8px 0 8px 20px;cursor:pointer;position:relative;
-  transition:color .4s,transform .4s,padding-left .4s}
-.cs-nav__btn:hover{color:rgba(255,247,234,.65)}
-.cs-nav__btn.active{color:#fff7ea;padding-left:32px}
-.cs-nav__btn.active::before{
-  content:'';position:absolute;left:0;top:50%;
-  width:18px;height:2px;background:var(--accent);
-  transform:translateY(-50%);
-  transition:width .4s var(--ease)}
-
-/* -- controls + odometer (bottom-right) -- */
+/* ===== CONTROLS + ODOMETER (bottom-left) ===== */
 .cs-controls{
-  position:absolute;bottom:clamp(24px,4vh,48px);right:clamp(30px,5vw,80px);
+  position:absolute;bottom:clamp(24px,4vh,48px);left:clamp(40px,6vw,100px);
   z-index:20;display:flex;align-items:center;gap:16px}
 .cs-arrow{
   width:48px;height:48px;border-radius:50%;
@@ -222,7 +272,7 @@ em{font-style:italic;color:var(--accent-deep)}
 .cs-odometer__track{transition:transform .6s cubic-bezier(.22,1,.36,1)}
 .cs-odometer__track span{display:block;height:1.6em;line-height:1.6em}
 
-/* -- loop wipe curtain -- */
+/* ===== LOOP WIPE CURTAIN ===== */
 .cs-wipe{
   position:absolute;inset:0;z-index:50;
   background:var(--bg);
@@ -235,7 +285,7 @@ em{font-style:italic;color:var(--accent-deep)}
   100%{transform:translateX(101%)}
 }
 
-/* -- slider header: dark/transparent when over slider -- */
+/* ===== HEADER: dark when over slider ===== */
 .site-header.over-slider{
   background:rgba(10,8,6,.4);
   box-shadow:none}
@@ -246,18 +296,21 @@ em{font-style:italic;color:var(--accent-deep)}
 .site-header.over-slider .nav-cta{border-color:rgba(255,247,234,.3);color:#ffe7c4}
 .site-header.over-slider .nav-cta:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 
-/* -- mobile fallback -- */
+/* ===== MOBILE FALLBACK ===== */
 @media(max-width:760px){
   .cine-slider{height:auto;scroll-snap-type:y mandatory;overflow-y:auto}
   .cs-slide{position:relative;height:100svh;scroll-snap-align:start;pointer-events:auto}
-  .cs-slide .cs-bg,.cs-slide .cs-bg__img{transform:none!important;opacity:1!important;transition:none!important}
-  .cs-preview{display:none}
-  .cs-nav{display:none}
+  .cs-frame{top:0!important;left:0!important;width:100%!important;height:100%!important;
+    border-radius:0!important;opacity:1!important;transition:none!important;box-shadow:none!important}
+  .cs-frame__card-img{opacity:0!important}
+  .cs-frame__full-img{opacity:1!important}
+  .cs-frame__label{display:none}
   .cs-controls{display:none}
-  .cs-content{pointer-events:auto!important}
-  .cs-mask>*{transform:none!important;opacity:1!important;transition:none!important}
-  .cs-veil{background:linear-gradient(180deg,transparent 30%,rgba(10,8,6,.75) 70%)}
+  .cs-veil{opacity:1!important;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.7))}
+  .cs-name-wrap{pointer-events:auto!important}
+  .cs-char{transform:none!important;opacity:1!important;filter:none!important;transition:none!important}
 }
+
 
 /* ---- story parallax ---- */
 .story{position:relative;padding:clamp(110px,16vw,200px) clamp(20px,6vw,90px);overflow:hidden}
