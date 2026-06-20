@@ -19,8 +19,7 @@
       slide.dataset.index = i;
       slide.innerHTML =
         '<div class="cs-frame">' +
-          '<img class="cs-frame__card-img" src="' + enc(t.folder + '/title.webp') + '" alt="' + t.name + '">' +
-          '<img class="cs-frame__full-img" src="' + enc(t.folder + '/back.webp') + '" alt="' + t.name + '">' +
+          '<img class="cs-frame__img" src="' + enc(t.folder + '/back.webp') + '" alt="' + t.name + '">' +
           '<div class="cs-frame__grad"></div>' +
           '<span class="cs-frame__label">' + t.name + '</span>' +
         '</div>';
