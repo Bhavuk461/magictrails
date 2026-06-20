@@ -146,20 +146,11 @@ em{font-style:italic;color:var(--accent-deep)}
 .cs-slide[data-state="active"] .cs-frame__label{opacity:0}
 .cs-slide[data-state="active"] .cs-frame__grad{opacity:1}
 
-/* --- PREV: stays fullscreen, fades out, then later transitions to card slot --- */
-.cs-slide[data-state="prev"]{z-index:4}
-.cs-slide[data-state="prev"] .cs-frame{
-  top:0;left:0;width:100%;height:100%;
-  border-radius:0;opacity:0;
-  box-shadow:none;
-  /* keep default transitions so prev→next-X position change is animated */
-}
-.cs-slide[data-state="prev"] .cs-frame__card-img{opacity:0}
-.cs-slide[data-state="prev"] .cs-frame__full-img{opacity:1}
-.cs-slide[data-state="prev"] .cs-frame__label{opacity:0}
+/* Temporary z-boost while expanding — always on top of the shrinking old card */
+.cs-slide.cs-expanding{z-index:20 !important}
 
 /* --- NEXT-1: leftmost preview card --- */
-.cs-slide[data-state="next-1"]{z-index:10}
+.cs-slide[data-state="next-1"]{z-index:8}
 .cs-slide[data-state="next-1"] .cs-frame{
   top:calc(100% - var(--card-b) - var(--card-h));
   left:calc(100% - var(--card-r) - 3 * var(--card-w) - 2 * var(--card-gap));
@@ -168,7 +159,7 @@ em{font-style:italic;color:var(--accent-deep)}
 }
 
 /* --- NEXT-2: middle preview card --- */
-.cs-slide[data-state="next-2"]{z-index:9}
+.cs-slide[data-state="next-2"]{z-index:7}
 .cs-slide[data-state="next-2"] .cs-frame{
   top:calc(100% - var(--card-b) - var(--card-h));
   left:calc(100% - var(--card-r) - 2 * var(--card-w) - 1 * var(--card-gap));
@@ -177,7 +168,7 @@ em{font-style:italic;color:var(--accent-deep)}
 }
 
 /* --- NEXT-3: rightmost preview card --- */
-.cs-slide[data-state="next-3"]{z-index:8}
+.cs-slide[data-state="next-3"]{z-index:6}
 .cs-slide[data-state="next-3"] .cs-frame{
   top:calc(100% - var(--card-b) - var(--card-h));
   left:calc(100% - var(--card-r) - 1 * var(--card-w));
@@ -195,7 +186,7 @@ em{font-style:italic;color:var(--accent-deep)}
 }
 
 /* ===== VEIL (subtle bottom-only, NO left darkening) ===== */
-.cs-veil{position:absolute;inset:0;z-index:6;
+.cs-veil{position:absolute;inset:0;z-index:9;
   background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.55));
   pointer-events:none;opacity:0;transition:opacity .6s ease}
 .cs-slide[data-state="active"] .cs-veil{opacity:1}
@@ -204,7 +195,7 @@ em{font-style:italic;color:var(--accent-deep)}
 .cs-name-wrap{
   position:absolute;
   bottom:clamp(80px,12vh,160px);left:clamp(40px,6vw,100px);
-  z-index:7;pointer-events:none;
+  z-index:10;pointer-events:none;
   max-width:clamp(400px,65vw,900px);
 }
 .cs-name{
@@ -238,14 +229,6 @@ em{font-style:italic;color:var(--accent-deep)}
 .cs-slide[data-state="active"] .cs-char{
   transform:translateY(0);
   opacity:1;
-}
-
-/* Exit: slide up and out */
-.cs-slide[data-state="prev"] .cs-char{
-  transform:translateY(-80%);
-  opacity:0;
-  transition:transform .5s ease-in,opacity .35s ease-in;
-  transition-delay:calc(var(--d,0s) * .3);
 }
 
 /* ===== CONTROLS + ODOMETER (bottom-left) ===== */

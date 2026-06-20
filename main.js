@@ -62,7 +62,7 @@
     var slides = track.querySelectorAll('.cs-slide');
     var odometerTrack = track.querySelector('.cs-odometer__track');
 
-    function assignStates(activeIdx, prevIdx){
+    function assignStates(activeIdx){
       for(var i = 0; i < N; i++){
         var offset = (i - activeIdx + N) % N;
         var state;
@@ -71,8 +71,6 @@
         else if(offset === 2) state = 'next-2';
         else if(offset === 3) state = 'next-3';
         else                  state = 'hidden';
-        /* The outgoing slide gets 'prev' to trigger exit animation */
-        if(prevIdx !== undefined && i === prevIdx && i !== activeIdx) state = 'prev';
         slides[i].dataset.state = state;
       }
 
@@ -81,22 +79,6 @@
 
       /* Preview card click handlers */
       rebindCardClicks();
-
-      /* After fade-out, transition prev into its proper card slot so 3 cards stay visible */
-      if(prevIdx !== undefined && prevIdx !== activeIdx){
-        setTimeout(function(){
-          /* Guard: only reassign if still in prev state (user hasn't clicked again) */
-          if(slides[prevIdx].dataset.state !== 'prev') return;
-          var offset = (prevIdx - current + N) % N;
-          var state;
-          if(offset === 1) state = 'next-1';
-          else if(offset === 2) state = 'next-2';
-          else if(offset === 3) state = 'next-3';
-          else state = 'hidden';
-          slides[prevIdx].dataset.state = state;
-          rebindCardClicks();
-        }, 900);
-      }
     }
 
     function rebindCardClicks(){
@@ -127,24 +109,32 @@
         });
       }
 
-      var prev = current;
       current = targetIdx;
-      assignStates(current, prev);
 
-      /* Unlock after expansion completes (listen to transitionend on the frame) */
+      /* Boost z-index of the expanding slide so it's always on top */
+      slides[current].classList.add('cs-expanding');
+
+      /* Assign all states simultaneously — old active shrinks, new card expands */
+      assignStates(current);
+
+      /* Remove z-boost and unlock after expansion completes */
       var activeFrame = slides[current].querySelector('.cs-frame');
-      function unlock(e){
+      function onDone(e){
         if(e.propertyName === 'width' || e.propertyName === 'height'){
-          activeFrame.removeEventListener('transitionend', unlock);
+          activeFrame.removeEventListener('transitionend', onDone);
+          slides[current].classList.remove('cs-expanding');
           isLocked = false;
         }
       }
-      activeFrame.addEventListener('transitionend', unlock);
+      activeFrame.addEventListener('transitionend', onDone);
       /* Safety timeout */
-      setTimeout(function(){ isLocked = false; }, 1400);
+      setTimeout(function(){
+        slides[current].classList.remove('cs-expanding');
+        isLocked = false;
+      }, 1400);
     }
 
-    /* Initial state (no prev index) */
+    /* Initial state */
     assignStates(0);
   }
 
