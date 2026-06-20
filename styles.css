@@ -72,65 +72,198 @@ em{font-style:italic;color:var(--accent-deep)}
 .btn-primary:hover{background:var(--accent-deep);box-shadow:0 24px 50px -18px rgba(138,85,32,.6)}
 .magnetic{will-change:transform}
 
-/* ---- generic sections ---- */
-.section-head{padding:clamp(80px,12vw,150px) clamp(20px,6vw,90px) 40px;max-width:900px}
-.eyebrow{letter-spacing:.35em;text-transform:uppercase;font-size:.75rem;color:var(--accent-deep);margin-bottom:16px}
-.section-title{font-size:clamp(2.2rem,6vw,4.4rem);line-height:1.02;letter-spacing:-.01em;color:var(--ink)}
-.section-lead{margin-top:18px;color:var(--ink-soft);max-width:540px;font-size:1.08rem}
+/* ---- cinematic slider ---- */
+.cine-slider{position:relative;height:100svh;min-height:600px;overflow:hidden;background:#0a0806}
+.cine-slider__track{position:relative;width:100%;height:100%}
 
-/* ---- trek grid: 2×2 rows, per-row accordion ---- */
-.trek-grid{display:flex;flex-direction:column;gap:20px;padding:0 clamp(20px,4vw,60px) clamp(90px,12vw,160px)}
+/* -- slide base -- */
+.cs-slide{position:absolute;inset:0;pointer-events:none}
 
-/* Each row holds 2 cards side-by-side. Compact rest height for dramatic expansion contrast */
-.trek-row{display:flex;flex-direction:row;gap:14px;height:clamp(280px,32vh,380px);
-  transition:opacity .6s var(--ease),filter .6s var(--ease)}
+/* -- background images (transform + opacity ONLY) -- */
+.cs-bg{position:absolute;inset:0;overflow:hidden}
+.cs-bg__img{
+  width:100%;height:100%;object-fit:cover;
+  transform:scale(1.08);opacity:0;
+  transition:transform 1.4s cubic-bezier(.16,1,.3,1),opacity 1s cubic-bezier(.16,1,.3,1);
+}
+/* Kuari Pass portrait image — show upper peaks */
+.cs-slide:nth-child(4) .cs-bg__img{object-position:center 30%}
 
-/* Dim the OTHER row — only when a card is actually being hovered (avoids white flash) */
-.trek-grid:has(.trek-card:hover) .trek-row:not(:has(.trek-card:hover)){opacity:.45;filter:brightness(.7) saturate(.4)}
+/* -- dark veil for text legibility -- */
+.cs-veil{position:absolute;inset:0;z-index:4;
+  background:linear-gradient(135deg,rgba(10,8,6,.72) 0%,rgba(10,8,6,.35) 40%,transparent 70%);
+  pointer-events:none}
 
-/* Card: flex accordion within its row; WAAPI handles row height expansion */
-.trek-card{position:relative;display:block;flex:1;min-width:0;
-  border-radius:var(--card-radius);overflow:hidden;background:var(--surface);box-shadow:var(--shadow-md);transform:translateZ(0);
-  transition:flex .8s cubic-bezier(.22,1,.36,1),box-shadow .5s var(--ease),filter .5s var(--ease),opacity .5s var(--ease)}
+/* -- slide states -- */
+.cs-slide[data-state="active"]{z-index:3;pointer-events:auto}
+.cs-slide[data-state="active"] .cs-bg__img{transform:scale(1);opacity:1}
 
-/* Per-row accordion — only when a card in THIS row is hovered */
-.trek-row:has(.trek-card:hover) .trek-card:not(:hover){flex:.4;filter:brightness(.6) saturate(.4);opacity:.65}
-.trek-row .trek-card:hover{flex:4;filter:none;opacity:1;box-shadow:var(--shadow-lg)}
+.cs-slide[data-state="prev"]{z-index:2}
+.cs-slide[data-state="prev"] .cs-bg__img{
+  transform:scale(1.04);opacity:0;
+  transition:transform 1s ease-in,opacity .8s ease-in}
 
-@media(max-width:760px){
-  .trek-grid{gap:24px}
-  .trek-row{flex-direction:column;height:auto;gap:24px}
-  .trek-row:has(.trek-card:hover) .trek-card:not(:hover){flex:none;filter:none;opacity:1}
-  .trek-card{flex:none!important;width:min(360px,88vw);height:min(450px,110vw);margin:0 auto;filter:none!important;opacity:1!important}
+.cs-slide[data-state="next-1"]{z-index:10}
+.cs-slide[data-state="next-2"]{z-index:9}
+.cs-slide[data-state="hidden"]{z-index:1}
+
+/* -- preview cards (positioned with transform, not left/bottom) -- */
+.cs-preview{
+  position:absolute;
+  bottom:0;right:0;
+  width:clamp(140px,12vw,200px);height:clamp(200px,17vw,290px);
+  border-radius:14px;overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,.4);
+  cursor:pointer;
+  opacity:0;transform:translate(60px,0);
+  transition:transform .9s cubic-bezier(.22,1,.36,1),opacity .6s cubic-bezier(.22,1,.36,1)}
+.cs-preview__img{width:100%;height:100%;object-fit:cover}
+.cs-preview__label{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:10px 14px;
+  background:linear-gradient(transparent,rgba(0,0,0,.7));
+  color:#fff;font-size:.78rem;font-weight:600}
+
+/* active → preview card is hidden (background showing) */
+.cs-slide[data-state="active"] .cs-preview{opacity:0;transform:translate(0,0) scale(1.3);
+  transition:opacity .4s ease-out,transform .6s ease-out}
+
+/* next-1: first preview card */
+.cs-slide[data-state="next-1"] .cs-preview{
+  opacity:1;pointer-events:auto;
+  transform:translate(
+    calc(-100% - clamp(140px,12vw,200px) - 40px),
+    calc(-15svh)
+  )}
+
+/* next-2: second preview card */
+.cs-slide[data-state="next-2"] .cs-preview{
+  opacity:1;pointer-events:auto;
+  transform:translate(
+    calc(-100% - 20px),
+    calc(-15svh)
+  )}
+
+/* hidden/prev → preview hidden */
+.cs-slide[data-state="hidden"] .cs-preview,
+.cs-slide[data-state="prev"] .cs-preview{opacity:0;transform:translate(60px,0)}
+
+/* -- content text (masked reveal) -- */
+.cs-content{
+  position:absolute;
+  bottom:clamp(60px,10vh,120px);left:clamp(40px,6vw,100px);
+  z-index:5;max-width:600px;pointer-events:none}
+
+.cs-mask{overflow:hidden}
+.cs-mask>*{
+  display:block;
+  transform:translateY(110%);opacity:0;
+  transition:transform .8s cubic-bezier(.16,1,.3,1),opacity .5s cubic-bezier(.16,1,.3,1)}
+
+/* staggered entrance */
+.cs-slide[data-state="active"] .cs-mask>*{transform:translateY(0);opacity:1}
+.cs-slide[data-state="active"] .cs-content{pointer-events:auto}
+.cs-slide[data-state="active"] .cs-mask:nth-child(1)>*{transition-delay:.35s}
+.cs-slide[data-state="active"] .cs-mask:nth-child(2)>*{transition-delay:.45s}
+.cs-slide[data-state="active"] .cs-mask:nth-child(3)>*{transition-delay:.55s}
+.cs-slide[data-state="active"] .cs-mask:nth-child(4)>*{transition-delay:.65s}
+.cs-slide[data-state="active"] .cs-mask:nth-child(5)>*{transition-delay:.75s}
+
+/* exit: text slides down */
+.cs-slide[data-state="prev"] .cs-mask>*{
+  transform:translateY(40px);opacity:0;
+  transition:transform .4s ease-in,opacity .3s ease-in}
+
+/* typography */
+.cs-kicker{letter-spacing:.35em;text-transform:uppercase;font-size:.78rem;color:#ffe7c4;text-shadow:0 1px 10px rgba(0,0,0,.3)}
+.cs-title{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,6vw,5rem);line-height:1;font-weight:500;color:#fff7ea;margin-top:8px;text-shadow:0 4px 20px rgba(0,0,0,.4)}
+.cs-tagline{color:#e8dcc8;font-size:clamp(.95rem,1.3vw,1.15rem);margin-top:14px;max-width:480px;line-height:1.5}
+.cs-meta{display:flex;gap:12px;margin-top:16px;font-size:.85rem;color:#d4c8b4;flex-wrap:wrap}
+.cs-meta__dot{color:var(--accent)}
+.cs-cta{
+  display:inline-flex;align-items:center;gap:10px;margin-top:22px;
+  padding:14px 32px;background:var(--accent);color:#fff;font-weight:600;
+  border-radius:40px;font-size:.95rem;
+  box-shadow:0 12px 32px -10px rgba(185,118,47,.5);
+  transition:background .3s,transform .3s,box-shadow .3s}
+.cs-cta:hover{background:var(--accent-deep);transform:translateY(-2px);box-shadow:0 18px 40px -12px rgba(138,85,32,.6)}
+.cs-cta__arrow{transition:transform .3s}.cs-cta:hover .cs-cta__arrow{transform:translateX(4px)}
+
+/* -- title navigation (left side) -- */
+.cs-nav{
+  position:absolute;left:clamp(30px,5vw,80px);top:50%;transform:translateY(-50%);
+  z-index:20;display:flex;flex-direction:column;gap:4px}
+.cs-nav__btn{
+  background:none;border:none;
+  color:rgba(255,247,234,.35);font-family:'Fraunces',serif;
+  font-size:clamp(.88rem,1.1vw,1.05rem);text-align:left;
+  padding:8px 0 8px 20px;cursor:pointer;position:relative;
+  transition:color .4s,transform .4s,padding-left .4s}
+.cs-nav__btn:hover{color:rgba(255,247,234,.65)}
+.cs-nav__btn.active{color:#fff7ea;padding-left:32px}
+.cs-nav__btn.active::before{
+  content:'';position:absolute;left:0;top:50%;
+  width:18px;height:2px;background:var(--accent);
+  transform:translateY(-50%);
+  transition:width .4s var(--ease)}
+
+/* -- controls + odometer (bottom-right) -- */
+.cs-controls{
+  position:absolute;bottom:clamp(24px,4vh,48px);right:clamp(30px,5vw,80px);
+  z-index:20;display:flex;align-items:center;gap:16px}
+.cs-arrow{
+  width:48px;height:48px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.06);color:#fff;
+  font-size:1.1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .3s,border-color .3s;
+  backdrop-filter:blur(8px)}
+.cs-arrow:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.45)}
+
+.cs-odometer{
+  height:1.6em;overflow:hidden;
+  font-family:'Fraunces',serif;font-size:1.3rem;
+  color:#fff7ea;line-height:1.6em;width:2.5em;text-align:center}
+.cs-odometer__track{transition:transform .6s cubic-bezier(.22,1,.36,1)}
+.cs-odometer__track span{display:block;height:1.6em;line-height:1.6em}
+
+/* -- loop wipe curtain -- */
+.cs-wipe{
+  position:absolute;inset:0;z-index:50;
+  background:var(--bg);
+  transform:translateX(-101%);pointer-events:none}
+.cs-wipe.sweeping{animation:wipeAcross 1s cubic-bezier(.77,0,.175,1) forwards}
+@keyframes wipeAcross{
+  0%{transform:translateX(-101%)}
+  45%{transform:translateX(0)}
+  55%{transform:translateX(0)}
+  100%{transform:translateX(101%)}
 }
 
+/* -- slider header: dark/transparent when over slider -- */
+.site-header.over-slider{
+  background:rgba(10,8,6,.4);
+  box-shadow:none}
+.site-header.over-slider .brand{color:#fff7ea}
+.site-header.over-slider .brand-mark{color:var(--accent)}
+.site-header.over-slider .site-nav a{color:rgba(255,247,234,.7)}
+.site-header.over-slider .site-nav a:not(.nav-cta):hover{color:#fff7ea}
+.site-header.over-slider .nav-cta{border-color:rgba(255,247,234,.3);color:#ffe7c4}
+.site-header.over-slider .nav-cta:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 
-.trek-card .imgwrap{position:absolute;inset:0;background:#140c02}
-.trek-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;will-change:transform,opacity}
-
-/* title: portrait image — visible at rest, fades as card expands */
-.trek-card .img-title{z-index:2;object-fit:cover;opacity:1;transform:scale(1);transition:opacity .6s var(--ease) .35s,transform .9s var(--ease) .1s}
-/* back: landscape image — hidden at rest, revealed on hover after frame expands */
-.trek-card .img-back{z-index:1;object-fit:cover;opacity:0;transform:scale(1.06);transition:opacity .7s var(--ease) .45s,transform 1.1s var(--ease) .1s}
-.trek-card:hover .img-title,.trek-card:focus-visible .img-title{opacity:0;transform:scale(1.08)}
-.trek-card:hover .img-back,.trek-card:focus-visible .img-back{opacity:1;transform:scale(1)}
-
-/* Kuari Pass special: portrait back image — Ken Burns zoom instead of crossfade */
-.trek-card[data-ken-burns] .img-title{transition:transform 1.2s var(--ease)}
-.trek-card[data-ken-burns] .img-back{display:none}
-.trek-card[data-ken-burns]:hover .img-title{opacity:1;transform:scale(1.15) translateY(-3%)}
-
-.trek-card .grad{position:absolute;inset:0;z-index:3;background:linear-gradient(180deg,rgba(20,12,2,.10),transparent 38%,rgba(20,12,2,.05) 55%,rgba(20,12,2,.78));transition:background .6s}
-.trek-card .meta{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:clamp(16px,2.5vw,28px)}
-.trek-card .name{font-family:'Fraunces',serif;color:#fff;font-size:clamp(1.2rem,2.2vw,2.1rem);line-height:1.04;letter-spacing:-.01em;text-shadow:0 2px 16px rgba(20,12,2,.5)}
-
-/* Sub + open-hint: hidden on narrow resting cards, revealed on hover with stagger */
-.trek-card .sub{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px;font-size:.84rem;color:#f3e9d8;text-shadow:0 1px 10px rgba(20,12,2,.5);opacity:0;transform:translateY(6px);transition:opacity .4s var(--ease),transform .4s var(--ease)}
-.trek-card .sub .dot{color:#ffcf8c}
-.trek-card:hover .sub{opacity:.95;transform:translateY(0);transition-delay:.4s}
-.trek-card .price{position:absolute;top:18px;right:18px;z-index:4;background:rgba(255,248,237,.92);color:var(--accent-deep);border:1px solid var(--line);box-shadow:var(--shadow-sm);padding:7px 14px;border-radius:30px;font-weight:700;font-size:.9rem;transition:opacity .4s var(--ease),transform .4s var(--ease)}
-.trek-card .open-hint{margin-top:14px;display:inline-flex;align-items:center;gap:8px;font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;color:#ffd79a;opacity:0;transform:translateY(8px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
-.trek-card:hover .open-hint,.trek-card:focus-visible .open-hint{opacity:1;transform:translateY(0);transition-delay:.5s}
+/* -- mobile fallback -- */
+@media(max-width:760px){
+  .cine-slider{height:auto;scroll-snap-type:y mandatory;overflow-y:auto}
+  .cs-slide{position:relative;height:100svh;scroll-snap-align:start;pointer-events:auto}
+  .cs-slide .cs-bg,.cs-slide .cs-bg__img{transform:none!important;opacity:1!important;transition:none!important}
+  .cs-preview{display:none}
+  .cs-nav{display:none}
+  .cs-controls{display:none}
+  .cs-content{pointer-events:auto!important}
+  .cs-mask>*{transform:none!important;opacity:1!important;transition:none!important}
+  .cs-veil{background:linear-gradient(180deg,transparent 30%,rgba(10,8,6,.75) 70%)}
+}
 
 /* ---- story parallax ---- */
 .story{position:relative;padding:clamp(110px,16vw,200px) clamp(20px,6vw,90px);overflow:hidden}
