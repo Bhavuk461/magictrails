@@ -2,44 +2,45 @@
   'use strict';
   var enc = function(p){ return p.split('/').map(encodeURIComponent).join('/'); };
 
-  /* ========== CINEMATIC SLIDER ENGINE (v2 — expanding cards) ========== */
+  /* ========== CINEMATIC SLIDER ENGINE (v3 — track-level overlays) ========== */
   var track = document.getElementById('cine-track');
   if(track && window.TREKS){
     var N = window.TREKS.length;
     var current = 0;
     var isLocked = false;
 
-    /* ---- Build slide DOM ---- */
+    /* ---- Suppress transitions on first paint ---- */
+    track.classList.add('cs-no-anim');
+
+    /* ---- Build slide DOM (frames only, no text overlays) ---- */
     window.TREKS.forEach(function(t, i){
       var slide = document.createElement('div');
       slide.className = 'cs-slide';
       slide.dataset.index = i;
-
-      /* Split name into per-character spans for staggered animation */
-      var chars = t.name.split('').map(function(c, j){
-        if(c === ' ') return '<span class="cs-char cs-space" style="--d:' + (j * 30) + 'ms">\u00A0</span>';
-        return '<span class="cs-char" style="--d:' + (j * 30) + 'ms">' + c + '</span>';
-      }).join('');
-
       slide.innerHTML =
-        /* The expanding frame — uses title.webp for card, back.webp for fullscreen */
         '<div class="cs-frame">' +
           '<img class="cs-frame__card-img" src="' + enc(t.folder + '/title.webp') + '" alt="' + t.name + '">' +
           '<img class="cs-frame__full-img" src="' + enc(t.folder + '/back.webp') + '" alt="' + t.name + '">' +
           '<div class="cs-frame__grad"></div>' +
           '<span class="cs-frame__label">' + t.name + '</span>' +
-        '</div>' +
-        /* Dark veil for text legibility (only on active) */
-        '<div class="cs-veil"></div>' +
-        /* Trek name — the ONLY text content */
-        '<div class="cs-name-wrap">' +
-          '<a href="trek.html?t=' + encodeURIComponent(t.slug) + '" class="cs-name">' + chars + '</a>' +
         '</div>';
-
       track.appendChild(slide);
     });
 
-    /* ---- Controls + odometer (bottom-left) ---- */
+    /* ---- Shared veil (track-level, always visible) ---- */
+    var veil = document.createElement('div');
+    veil.className = 'cs-veil';
+    track.appendChild(veil);
+
+    /* ---- Shared trek name (track-level) ---- */
+    var nameWrap = document.createElement('div');
+    nameWrap.className = 'cs-name-wrap';
+    var nameEl = document.createElement('a');
+    nameEl.className = 'cs-name';
+    nameWrap.appendChild(nameEl);
+    track.appendChild(nameWrap);
+
+    /* ---- Controls + odometer ---- */
     var controls = document.createElement('div');
     controls.className = 'cs-controls';
     controls.innerHTML =
@@ -49,7 +50,6 @@
       '</div></div>' +
       '<button class="cs-arrow cs-arrow--next" aria-label="Next">\u2192</button>';
     track.appendChild(controls);
-
     controls.querySelector('.cs-arrow--prev').addEventListener('click', function(){ goTo((current - 1 + N) % N); });
     controls.querySelector('.cs-arrow--next').addEventListener('click', function(){ goTo((current + 1) % N); });
 
@@ -62,6 +62,32 @@
     var slides = track.querySelectorAll('.cs-slide');
     var odometerTrack = track.querySelector('.cs-odometer__track');
 
+    function buildChars(name){
+      return name.split('').map(function(c, j){
+        if(c === ' ') return '<span class="cs-char cs-space" style="--d:' + (j * 30) + 'ms">\u00A0</span>';
+        return '<span class="cs-char" style="--d:' + (j * 30) + 'ms">' + c + '</span>';
+      }).join('');
+    }
+
+    function showName(trekIdx){
+      var t = window.TREKS[trekIdx];
+      nameEl.innerHTML = buildChars(t.name);
+      nameEl.href = 'trek.html?t=' + encodeURIComponent(t.slug);
+      void nameWrap.offsetHeight; /* force reflow */
+      nameWrap.classList.remove('exiting');
+      nameWrap.classList.add('active');
+    }
+
+    function transitionName(trekIdx){
+      /* Exit old name */
+      nameWrap.classList.remove('active');
+      nameWrap.classList.add('exiting');
+      /* After exit completes, show new name */
+      setTimeout(function(){
+        showName(trekIdx);
+      }, 280);
+    }
+
     function assignStates(activeIdx){
       for(var i = 0; i < N; i++){
         var offset = (i - activeIdx + N) % N;
@@ -73,11 +99,7 @@
         else                  state = 'hidden';
         slides[i].dataset.state = state;
       }
-
-      /* Odometer */
       odometerTrack.style.transform = 'translateY(' + (-activeIdx * 1.6) + 'em)';
-
-      /* Preview card click handlers */
       rebindCardClicks();
     }
 
@@ -100,7 +122,6 @@
 
       var isLoopForward  = (current === N - 1 && targetIdx === 0);
       var isLoopBackward = (current === 0 && targetIdx === N - 1);
-
       if(isLoopForward || isLoopBackward){
         wipe.classList.add('sweeping');
         wipe.addEventListener('animationend', function handler(){
@@ -109,33 +130,35 @@
         });
       }
 
+      var oldSlide = slides[current];
       current = targetIdx;
 
-      /* Boost z-index of the expanding slide so it's always on top */
-      slides[current].classList.add('cs-expanding');
+      /* Old active shrinks BEHIND the new one (z:3) */
+      oldSlide.classList.add('cs-shrinking');
 
-      /* Assign all states simultaneously — old active shrinks, new card expands */
+      /* Assign new positions — new active expands, old shrinks, cards shift */
       assignStates(current);
 
-      /* Remove z-boost and unlock after expansion completes */
-      var activeFrame = slides[current].querySelector('.cs-frame');
-      function onDone(e){
-        if(e.propertyName === 'width' || e.propertyName === 'height'){
-          activeFrame.removeEventListener('transitionend', onDone);
-          slides[current].classList.remove('cs-expanding');
-          isLocked = false;
-        }
-      }
-      activeFrame.addEventListener('transitionend', onDone);
-      /* Safety timeout */
+      /* Transition the name */
+      transitionName(current);
+
+      /* After transition completes, remove shrinking class and unlock */
       setTimeout(function(){
-        slides[current].classList.remove('cs-expanding');
+        oldSlide.classList.remove('cs-shrinking');
         isLocked = false;
-      }, 1400);
+      }, 1200);
     }
 
-    /* Initial state */
+    /* ---- Initial state (no animation) ---- */
     assignStates(0);
+    showName(0);
+
+    /* Enable transitions after first paint */
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        track.classList.remove('cs-no-anim');
+      });
+    });
   }
 
   /* ========== REVEAL ON SCROLL ========== */
@@ -146,7 +169,6 @@
   },{threshold:0.14, rootMargin:'0px 0px -8% 0px'});
   document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
 
-  /* hero title kinetic intro */
   var heroTitle = document.querySelector('.hero-title.kinetic');
   if(heroTitle){ requestAnimationFrame(function(){ setTimeout(function(){ heroTitle.classList.add('in'); },120); }); }
 
@@ -194,8 +216,7 @@
       header.classList.toggle('scrolled', window.pageYOffset > 40);
       if(slider){
         var sr = slider.getBoundingClientRect();
-        var inSlider = sr.top < 60 && sr.bottom > 60;
-        header.classList.toggle('over-slider', inSlider);
+        header.classList.toggle('over-slider', sr.top < 60 && sr.bottom > 60);
       }
     }
     window.addEventListener('scroll', updateHeader, {passive:true});
@@ -207,9 +228,7 @@
     document.querySelectorAll('.magnetic').forEach(function(btn){
       btn.addEventListener('mousemove', function(e){
         var r = btn.getBoundingClientRect();
-        var mx = e.clientX - r.left - r.width/2;
-        var my = e.clientY - r.top - r.height/2;
-        btn.style.transform = 'translate('+ (mx*0.25) +'px,'+ (my*0.35) +'px)';
+        btn.style.transform = 'translate('+ ((e.clientX-r.left-r.width/2)*0.25) +'px,'+ ((e.clientY-r.top-r.height/2)*0.35) +'px)';
       });
       btn.addEventListener('mouseleave', function(){ btn.style.transform=''; });
     });
