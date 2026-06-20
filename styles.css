@@ -75,7 +75,7 @@ em{font-style:italic;color:var(--accent-deep)}
 /* ---- cinematic slider ---- */
 .cine-slider{
   position:relative;height:100svh;min-height:600px;overflow:hidden;
-  background:#0a0806;contain:layout style paint;
+  background:#f5f0e8;contain:layout style paint;
   --card-w:clamp(170px,15vw,240px);
   --card-h:clamp(240px,22vw,340px);
   --card-gap:14px;
