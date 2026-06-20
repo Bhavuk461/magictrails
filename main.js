@@ -80,6 +80,26 @@
       odometerTrack.style.transform = 'translateY(' + (-activeIdx * 1.6) + 'em)';
 
       /* Preview card click handlers */
+      rebindCardClicks();
+
+      /* After fade-out, transition prev into its proper card slot so 3 cards stay visible */
+      if(prevIdx !== undefined && prevIdx !== activeIdx){
+        setTimeout(function(){
+          /* Guard: only reassign if still in prev state (user hasn't clicked again) */
+          if(slides[prevIdx].dataset.state !== 'prev') return;
+          var offset = (prevIdx - current + N) % N;
+          var state;
+          if(offset === 1) state = 'next-1';
+          else if(offset === 2) state = 'next-2';
+          else if(offset === 3) state = 'next-3';
+          else state = 'hidden';
+          slides[prevIdx].dataset.state = state;
+          rebindCardClicks();
+        }, 900);
+      }
+    }
+
+    function rebindCardClicks(){
       slides.forEach(function(s){
         var frame = s.querySelector('.cs-frame');
         var idx = +s.dataset.index;
