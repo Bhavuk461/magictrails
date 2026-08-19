@@ -149,12 +149,34 @@ html[data-theme="bloom"] body::after{opacity:.14}
 
 /* ═══ hero — full-bleed (verdant + nocturne) ══════════════════════════════ */
 
-.hero-full{position:relative;min-height:100svh;display:flex;align-items:flex-end;overflow:hidden}
+/* The hero ends as a photographic plate: a crisp foot with a hairline and a
+   soft cast shadow onto the page, rather than dissolving into the ground.
+   The old veil faded to var(--bg), and compositing a pale ground at partial
+   alpha over a dark photograph can only ever produce grey haze — that was
+   the washed-out band across the bottom of every hero. */
+.hero-full{
+  position:relative;min-height:100svh;display:flex;align-items:flex-end;
+  overflow:hidden;
+  box-shadow:0 22px 48px -30px rgba(18,24,12,.6)}
 .hero-full .plate{position:absolute;inset:0}
 .hero-full .plate img{width:100%;height:100%;object-fit:cover;object-position:center 45%}
 .hero-full .plate__veil{
   position:absolute;inset:0;
-  background:linear-gradient(180deg,rgba(10,8,4,.55) 0%,rgba(10,8,4,.15) 35%,rgba(14,11,6,.82) 82%,var(--bg) 100%)}
+  /* Deepens toward the foot so the title reads, and stays in the
+     photograph's own darkness the whole way down. */
+  background:linear-gradient(180deg,
+    rgba(6,9,5,.52) 0%,
+    rgba(6,9,5,.17) 27%,
+    rgba(6,9,5,.07) 44%,
+    rgba(6,9,5,.40) 72%,
+    rgba(6,9,5,.68) 90%,
+    rgba(6,9,5,.78) 100%)}
+/* A thread of light along the foot, so the edge reads as deliberate. */
+.hero-full::after{
+  content:'';position:absolute;left:0;right:0;bottom:0;height:1px;z-index:3;
+  background:linear-gradient(90deg,
+    transparent, var(--accent-deep) 18%, var(--accent-deep) 82%, transparent);
+  opacity:.55}
 .hero-full__inner{
   position:relative;z-index:2;width:100%;max-width:var(--wrap);
   margin:0 auto;padding:0 var(--gutter) clamp(72px,12vh,130px)}
@@ -579,12 +601,24 @@ html[data-theme="nocturne"] .band{background:var(--bg-2)}
   opacity:.5;
   stroke-dasharray:1;
   stroke-dashoffset:calc(1 - var(--grow))}
+/* A leaf is a group: a filled blade plus a stroked midrib and side veins.
+   The group carries the animation, so the extra botanical detail costs
+   nothing extra when --grow changes. */
 .vine-leaf{
-  fill:var(--leaf,#6f8f56);
   opacity:calc((var(--grow) - var(--at,0)) * 12);
   transform:scale(clamp(0, (var(--grow) - var(--at,0)) * 9, 1));
   transform-box:fill-box;transform-origin:0% 50%}
-.vine-leaf.is-alt{fill:var(--vine,#5d7a4a);opacity:calc((var(--grow) - var(--at,0)) * 9)}
+.vine-leaf .leaf-blade{
+  fill:var(--leaf,#6f8f56);
+  stroke:var(--vine,#5d7a4a);stroke-width:.5;stroke-opacity:.55}
+.vine-leaf .leaf-vein{
+  fill:none;
+  stroke:var(--vine,#5d7a4a);
+  stroke-width:.62;stroke-opacity:.42;
+  stroke-linecap:round}
+.vine-leaf.is-alt{opacity:calc((var(--grow) - var(--at,0)) * 9)}
+.vine-leaf.is-alt .leaf-blade{fill:var(--vine,#5d7a4a)}
+.vine-leaf.is-alt .leaf-vein{stroke:var(--leaf,#6f8f56);stroke-opacity:.5}
 
 /* Content must always sit above the vines. */
 html[data-theme="verdant"] #trek-root > *,
