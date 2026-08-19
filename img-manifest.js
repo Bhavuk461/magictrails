@@ -13,7 +13,7 @@ window.MT_IMAGES = {
  },
  "Buran ghati/IMG_5570.webp": {
   "dir": "img/buran-ghati",
-  "h": 2556,
+  "h": 2096,
   "stem": "img-5570",
   "w": 1179,
   "widths": [
@@ -53,7 +53,7 @@ window.MT_IMAGES = {
  },
  "Buran ghati/title.webp": {
   "dir": "img/buran-ghati",
-  "h": 4032,
+  "h": 3477,
   "stem": "title",
   "w": 2268,
   "widths": [
@@ -67,7 +67,7 @@ window.MT_IMAGES = {
   "dir": "img/chandrashila-tungnath",
   "h": 1036,
   "stem": "screenshot-2026-06-14-230258",
-  "w": 1855,
+  "w": 1846,
   "widths": [
    480,
    960,
@@ -89,7 +89,7 @@ window.MT_IMAGES = {
   "dir": "img/chandrashila-tungnath",
   "h": 1080,
   "stem": "screenshot-20260614-230825-photos-jpg",
-  "w": 1920,
+  "w": 1919,
   "widths": [
    480,
    960,
@@ -100,7 +100,7 @@ window.MT_IMAGES = {
   "dir": "img/chandrashila-tungnath",
   "h": 1080,
   "stem": "screenshot-20260614-231354-photos-jpg",
-  "w": 1930,
+  "w": 1921,
   "widths": [
    480,
    960,
@@ -121,7 +121,7 @@ window.MT_IMAGES = {
   "dir": "img/chandrashila-tungnath",
   "h": 1080,
   "stem": "back",
-  "w": 1924,
+  "w": 1920,
   "widths": [
    480,
    960,
