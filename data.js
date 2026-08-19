@@ -2,7 +2,8 @@
 // `theme` selects the trek-page treatment, all defined in trek.css:
 //   journal  - printed field-journal on paper
 //   verdant  - beige-green, with leaf vines that grow as you scroll
-//   nocturne - night sky, glowing, with a drifting starfield
+//   bloom    - the same green ground, but Brahma Kamal open as you scroll
+//   nocturne - night sky with a drifting starfield
 //
 // Each gallery entry carries a `frame`, chosen for that specific photograph:
 //   mat      museum matting + inner hairline - formal, lets a strong frame breathe
@@ -65,7 +66,7 @@ window.TREKS = [
   },
   {
     slug: 'roopkund',
-    theme: 'verdant',
+    theme: 'bloom',
     name: 'Roopkund',
     folder: 'Roopkund trek',
     price: '₹16,000',

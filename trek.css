@@ -4,7 +4,7 @@
    One design system, three grounds:
      journal   printed field-journal on paper
      verdant   beige-green, with leaf vines that grow as you scroll
-     nocturne  night sky, glowing, with a drifting starfield
+     nocturne  night sky with a drifting starfield
    They share every component below — type scale, hairline rules, ledger,
    gallery, frames, rail — and diverge only in ground, hero shape, density
    and ambience. The theme comes from data.js and lands on <html data-theme>.
@@ -31,7 +31,8 @@ h1,h2,h3{font-optical-sizing:auto}
 
 /* ---- verdant: beige shifted green. Retune the shared tokens and the rest
    of the system follows without per-theme rules. ---- */
-html[data-theme="verdant"]{
+html[data-theme="verdant"],
+html[data-theme="bloom"]{
   --bg:#eef0e2;
   --bg-2:#e4e8d5;
   --surface:#f7f8ef;
@@ -43,8 +44,12 @@ html[data-theme="verdant"]{
   --accent-deep:#3f5732;
   --vine:#5d7a4a;
   --leaf:#6f8f56;
+  --petal:#f2e7cf;
+  --petal-edge:#d8caa6;
+  --core:#c9953f;
 }
-html[data-theme="verdant"] body{
+html[data-theme="verdant"] body,
+html[data-theme="bloom"] body{
   background-color:var(--bg);
   background-image:radial-gradient(120% 80% at 50% -10%, #f4f6ea 0%, var(--bg) 45%, var(--bg-2) 100%);
 }
@@ -64,8 +69,8 @@ html[data-theme="nocturne"]{
 }
 html[data-theme="nocturne"] body{
   background-color:var(--bg);
+  /* No moonlight — just the sky falling off to black, so the stars carry it. */
   background-image:
-    radial-gradient(90% 55% at 78% -8%, rgba(217,164,65,.16) 0%, transparent 60%),
     radial-gradient(120% 80% at 50% 0%, #16203c 0%, var(--bg) 45%, #070a15 100%);
 }
 html[data-theme="nocturne"] .site-header{
@@ -76,7 +81,8 @@ html[data-theme="nocturne"] .btn-primary,
 html[data-theme="nocturne"] .nav-cta:hover,
 html[data-theme="nocturne"] .bookbar__cta{color:#0b1020}
 html[data-theme="nocturne"] ::selection{background:var(--accent);color:#0b1020}
-html[data-theme="verdant"] ::selection{background:var(--accent);color:#fff}
+html[data-theme="verdant"] ::selection,
+html[data-theme="bloom"] ::selection{background:var(--accent);color:#fff}
 
 /* Grain sits above the ground, below content. */
 body::after{
@@ -84,7 +90,8 @@ body::after{
   background-image:var(--grain);background-size:160px 160px;
   opacity:.16;mix-blend-mode:multiply}
 html[data-theme="nocturne"] body::after{opacity:.22;mix-blend-mode:overlay}
-html[data-theme="verdant"] body::after{opacity:.14}
+html[data-theme="verdant"] body::after,
+html[data-theme="bloom"] body::after{opacity:.14}
 #trek-root,.site-header,.site-footer,.bookbar{position:relative;z-index:1}
 
 .loading{min-height:60svh;display:flex;align-items:center;justify-content:center;
@@ -266,6 +273,7 @@ html[data-theme="journal"] .prose .intro::first-letter{
   font-size:4.1em;line-height:.78;
   padding:.04em .1em 0 0;color:var(--accent)}
 html[data-theme="verdant"] .prose .intro::first-letter,
+html[data-theme="bloom"] .prose .intro::first-letter,
 html[data-theme="nocturne"] .prose .intro::first-letter{
   float:left;font-family:'Fraunces',Georgia,serif;font-weight:600;
   font-size:4.1em;line-height:.78;
@@ -579,7 +587,13 @@ html[data-theme="nocturne"] .band{background:var(--bg-2)}
 .vine-leaf.is-alt{fill:var(--vine,#5d7a4a);opacity:calc((var(--grow) - var(--at,0)) * 9)}
 
 /* Content must always sit above the vines. */
-html[data-theme="verdant"] #trek-root > *{position:relative;z-index:1}
+html[data-theme="verdant"] #trek-root > *,
+html[data-theme="bloom"] #trek-root > *{position:relative;z-index:1}
+/* ...but not the ambience layers themselves: the rule above would override
+   their position:absolute, collapse them to zero height and clip the whole
+   thing away, since overflow is hidden. Class beats universal here. */
+html[data-theme="verdant"] #trek-root > .vines,
+html[data-theme="bloom"] #trek-root > .blooms{position:absolute;z-index:0}
 
 @media(max-width:900px){
   /* Narrow margins would put vines under the text, so only one side runs. */
@@ -622,4 +636,84 @@ html[data-theme="nocturne"] body::after{z-index:0}
   .sky__shoot{display:none}
   .vine-stem{stroke-dashoffset:0}
   .vine-leaf{opacity:.85;transform:none}
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AMBIENCE — bloom (Roopkund)
+   Brahma Kamal, the flower that actually grows at this altitude and appears
+   in the trek's own gallery. Each plant draws its stem, then opens petal by
+   petal as you scroll past it.
+
+   Everything is driven by (--grow - --at) like the vines: --grow is scroll
+   progress, --at is where that plant sits down the page, and each petal adds
+   a small offset of its own so the flower unfurls in sequence instead of
+   popping open all at once.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.blooms{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  overflow:hidden;
+  --grow:0}
+.blooms svg{position:absolute;top:0;height:100%;overflow:visible}
+.blooms .b-left{left:0}
+.blooms .b-right{right:0}
+
+.bloom-stem{
+  fill:none;
+  stroke:var(--vine,#5d7a4a);
+  stroke-width:1.9;
+  stroke-linecap:round;
+  opacity:.5;
+  stroke-dasharray:1;
+  stroke-dashoffset:calc(1 - clamp(0, (var(--grow) - var(--at,0)) * 9, 1))}
+
+.bloom-leaf{
+  fill:var(--leaf,#6f8f56);
+  opacity:calc((var(--grow) - var(--at,0)) * 9);
+  transform:scale(clamp(0, (var(--grow) - var(--at,0)) * 7, 1));
+  transform-box:fill-box;transform-origin:0% 50%}
+
+/* Petals scale up from where they meet the heart of the flower. --d staggers
+   each one a little further along the scroll, which is what reads as opening
+   rather than appearing. */
+.bloom-petal{
+  fill:var(--petal,#f2e7cf);
+  stroke:var(--petal-edge,#d8caa6);
+  stroke-width:.8;
+  opacity:calc((var(--grow) - var(--at,0) - var(--d,0)) * 16);
+  transform:scale(clamp(0, (var(--grow) - var(--at,0) - var(--d,0)) * 11, 1));
+  transform-box:fill-box;transform-origin:50% 100%}
+.bloom-petal.is-inner{
+  fill:var(--surface,#f7f8ef);
+  stroke:none;
+  opacity:calc((var(--grow) - var(--at,0) - var(--d,0)) * 13)}
+
+.bloom-core{
+  fill:var(--core,#c9953f);
+  opacity:calc((var(--grow) - var(--at,0) - .05) * 10);
+  transform:scale(clamp(0, (var(--grow) - var(--at,0) - .05) * 8, 1));
+  transform-box:fill-box;transform-origin:50% 50%}
+
+/* A slow sway, so an opened flower is not simply frozen. Rotating the whole
+   plant from its base keeps the stem and head together. */
+.bloom-plant{
+  transform-box:fill-box;transform-origin:50% 100%;
+  animation:mtSway var(--sway,9s) ease-in-out var(--sway-delay,0s) infinite}
+@keyframes mtSway{
+  0%,100%{transform:rotate(-1.1deg)}
+  50%    {transform:rotate(1.1deg)}
+}
+
+@media(max-width:900px){
+  /* Margins are too narrow for two columns of flowers next to the text. */
+  .blooms .b-right{display:none}
+  .bloom-stem{opacity:.34}
+  .bloom-petal{stroke-width:.6}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .bloom-plant{animation:none}
+  .bloom-stem{stroke-dashoffset:0}
+  .bloom-petal,.bloom-core,.bloom-leaf{opacity:.9;transform:none}
 }
