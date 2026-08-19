@@ -444,97 +444,217 @@
     window.addEventListener('load', function(){ rebuild(); onScroll(); });
   }
 
-  /* --- bloom (Roopkund) --- */
+  /* --- bloom (Roopkund) ---
+     The planting is taken from the trek's own gallery photograph, which shows
+     Brahma Kamal standing over crimson Bistorta spikes, drifts of small white
+     Anaphalis daisies, and pale ferns. Those four make up the garden.
+
+     Node budget matters: everything driven by --grow restyles on every scroll
+     frame. So only Brahma Kamal, the feature flower, animates petal by petal;
+     the companions open as a single group each. Nesting is
+     placement (static attribute) > sway (CSS animation) > open (CSS transform),
+     because a CSS transform replaces an SVG transform attribute rather than
+     composing with it. */
   function buildBlooms(){
     var layer = document.createElement('div');
     layer.className = 'blooms';
     layer.setAttribute('aria-hidden', 'true');
     root.appendChild(layer);
 
-    var lastH = 0;
+    var lastH = 0, lastW = -1;
 
-    /* Seeded, so a given page always grows the same garden. */
     var seed = 90210;
     function rnd(){
       seed = (seed * 16807) % 2147483647;
       return (seed - 1) / 2147483646;
     }
+    function pick(a){ return a[Math.floor(rnd() * a.length)]; }
+
+    /* ---- shapes ---- */
 
     var PETAL = 'M0,0 C -6.5,-9 -6.5,-22 0,-31 C 6.5,-22 6.5,-9 0,0 Z';
-    var LEAF  = 'M0,0 C6,-8 18,-10 25,0 C18,10 6,8 0,0 Z';
+    var STRAP = 'M0,0 C7,-6 20,-8 30,-2 C20,8 7,7 0,0 Z';   /* broad rosette leaf */
+    var LANCE = 'M0,0 C5,-4 14,-6 21,-1 C14,5 5,5 0,0 Z';   /* narrow leaf */
 
-    /* One plant: a stem that draws, two leaves, then a head of layered
-       bracts. Brahma Kamal has an outer ring of pale bracts round a paler
-       inner cup, which is what the two rings here stand for. */
-    function plant(x, y, at, scale, flip){
-      var outer = 6, inner = 4;
-      var g = [];
+    /* Brahma Kamal: hooded cream bracts round a paler inner cup. */
+    function brahmaKamal(at){
+      var outer = 6, inner = 4, g = [], i, ang;
+      var lean = (rnd() - 0.5) * 12;
+      var len = 76 + rnd() * 26;
 
-      /* stem, curving back on itself the way a loaded stalk does */
-      var lean = (flip ? -1 : 1) * (5 + rnd() * 7);
-      var len = 74 + rnd() * 26;
       g.push('<path class="bloom-stem" pathLength="1" style="--at:' + at.toFixed(4) + '" ' +
-             'd="M0,0 C ' + (-lean) + ',' + (-len * 0.38) + ' ' +
-             (lean * 1.4) + ',' + (-len * 0.68) + ' ' + (lean * 0.4) + ',' + (-len) + '"/>');
+             'd="M0,0 C ' + (-lean) + ',' + (-len * 0.38) + ' ' + (lean * 1.4) + ',' +
+             (-len * 0.68) + ' ' + (lean * 0.4) + ',' + (-len) + '"/>');
 
-      /* two leaves off the lower stem */
-      g.push('<g transform="translate(' + (-lean * 0.35) + ',' + (-len * 0.34) + ') rotate(' +
-             (flip ? 205 : -25) + ')"><path class="bloom-leaf" style="--at:' +
-             (at + 0.012).toFixed(4) + '" d="' + LEAF + '"/></g>');
-      g.push('<g transform="translate(' + (lean * 0.5) + ',' + (-len * 0.6) + ') rotate(' +
-             (flip ? -20 : 200) + ')"><path class="bloom-leaf" style="--at:' +
-             (at + 0.022).toFixed(4) + '" d="' + LEAF + '"/></g>');
+      /* strap leaves at the base, as in the photograph */
+      g.push('<g transform="translate(-2,-6) rotate(-18)"><path class="bloom-leaf" ' +
+             'style="--at:' + (at + 0.010).toFixed(4) + '" d="' + STRAP + '"/></g>');
+      g.push('<g transform="translate(2,-11) rotate(196)"><path class="bloom-leaf" ' +
+             'style="--at:' + (at + 0.018).toFixed(4) + '" d="' + STRAP + '"/></g>');
 
-      /* head */
       var head = [];
-      var i, ang;
       for(i = 0; i < outer; i++){
-        ang = (360 / outer) * i + rnd() * 5;
-        head.push('<g transform="rotate(' + ang.toFixed(1) + ')">' +
-          '<path class="bloom-petal" style="--at:' + at.toFixed(4) +
-          ';--d:' + (0.03 + i * 0.006).toFixed(4) + '" d="' + PETAL + '"/></g>');
+        ang = (360 / outer) * i + rnd() * 6;
+        head.push('<g transform="rotate(' + ang.toFixed(1) + ')"><path class="bloom-petal" ' +
+          'style="--at:' + at.toFixed(4) + ';--d:' + (0.03 + i * 0.006).toFixed(4) +
+          '" d="' + PETAL + '"/></g>');
       }
       for(i = 0; i < inner; i++){
-        ang = (360 / inner) * i + 26;
-        head.push('<g transform="rotate(' + ang.toFixed(1) + ') scale(.62)">' +
+        ang = (360 / inner) * i + 30;
+        head.push('<g transform="rotate(' + ang.toFixed(1) + ') scale(.6)">' +
           '<path class="bloom-petal is-inner" style="--at:' + at.toFixed(4) +
           ';--d:' + (0.055 + i * 0.005).toFixed(4) + '" d="' + PETAL + '"/></g>');
       }
-      head.push('<circle class="bloom-core" style="--at:' + at.toFixed(4) + '" r="4.6"/>');
+      head.push('<circle class="bloom-core" style="--at:' + at.toFixed(4) + '" r="4.4"/>');
 
-      g.push('<g transform="translate(' + (lean * 0.4) + ',' + (-len) + ')">' +
+      g.push('<g transform="translate(' + (lean * 0.4).toFixed(1) + ',' + (-len).toFixed(1) + ')">' +
              head.join('') + '</g>');
+      return g.join('');
+    }
 
-      /* Placement on the outer group, sway on the inner one: the CSS animation
-         would otherwise replace this translate() and stack every plant on the
-         SVG origin, which is exactly why no flowers were visible. */
+    /* Bistorta: a slim crimson floret spike. Opens as one group. */
+    function bistorta(at){
+      var len = 46 + rnd() * 26;
+      var top = -len - (16 + rnd() * 10);
+      var lean = (rnd() - 0.5) * 9;
+      var g = '<path class="bi-stem" d="M0,0 C ' + (-lean) + ',' + (-len * 0.4) +
+              ' ' + lean + ',' + (-len * 0.75) + ' ' + (lean * 0.5) + ',' + (-len) + '"/>';
+      g += '<g transform="translate(' + (lean * 0.5).toFixed(1) + ',' + (-len).toFixed(1) + ')">' +
+             '<path class="bi-spike" d="M-3.1,0 C -4,' + ((top + len) * 0.45).toFixed(1) +
+             ' -3.3,' + ((top + len) * 0.85).toFixed(1) + ' 0,' + (top + len).toFixed(1) +
+             ' C 3.3,' + ((top + len) * 0.85).toFixed(1) + ' 4,' + ((top + len) * 0.45).toFixed(1) +
+             ' 3.1,0 Z"/>';
+      /* a few florets so the spike is not a flat silhouette */
+      for(var k = 0; k < 5; k++){
+        var fy = ((top + len) / 5) * (k + 0.5);
+        g += '<ellipse class="bi-floret" cx="' + ((k % 2 ? 1 : -1) * 1.1).toFixed(1) +
+             '" cy="' + fy.toFixed(1) + '" rx="1.5" ry="1.1"/>';
+      }
+      g += '</g>';
+      g += '<g transform="translate(0,-10) rotate(-24)"><path class="bi-leaf" d="' + LANCE + '"/></g>';
+      g += '<g transform="translate(1,-20) rotate(200)"><path class="bi-leaf" d="' + LANCE + '"/></g>';
+      return '<g class="bloom-open" style="--at:' + at.toFixed(4) + '">' + g + '</g>';
+    }
+
+    /* Anaphalis: a low drift of tiny white daisies over grey-green leaves. */
+    function anaphalis(at){
+      var n = 4 + Math.floor(rnd() * 3), g = '', i;
+      for(i = 0; i < 3; i++){
+        g += '<g transform="translate(' + ((rnd() - 0.5) * 16).toFixed(1) + ',-2) rotate(' +
+             (-60 + rnd() * 120).toFixed(0) + ') scale(.62)"><path class="an-leaf" d="' +
+             LANCE + '"/></g>';
+      }
+      for(i = 0; i < n; i++){
+        var fx = (rnd() - 0.5) * 26;
+        var fy = -6 - rnd() * 18;
+        var r = 2 + rnd() * 0.9;
+        g += '<circle class="an-ray" cx="' + fx.toFixed(1) + '" cy="' + fy.toFixed(1) +
+             '" r="' + r.toFixed(1) + '"/>' +
+             '<circle class="an-eye" cx="' + fx.toFixed(1) + '" cy="' + fy.toFixed(1) +
+             '" r="' + (r * 0.42).toFixed(1) + '"/>';
+      }
+      return '<g class="bloom-open" style="--at:' + at.toFixed(4) + '">' + g + '</g>';
+    }
+
+    /* Fern: an arching rachis with pinnae stepping down its length. */
+    function fern(at, flip){
+      var len = 54 + rnd() * 26;
+      var dir = flip ? -1 : 1;
+      var g = '<path class="fn-rachis" d="M0,0 C ' + (10 * dir) + ',' + (-len * 0.45) +
+              ' ' + (16 * dir) + ',' + (-len * 0.78) + ' ' + (13 * dir) + ',' + (-len) + '"/>';
+      var n = 9;
+      for(var i = 0; i < n; i++){
+        var p = (i + 1) / (n + 1);
+        var px = (10 * dir) * p * 1.25;
+        var py = -len * p;
+        var s = (1 - p * 0.62) * 0.5;
+        g += '<g transform="translate(' + px.toFixed(1) + ',' + py.toFixed(1) + ') rotate(' +
+             ((flip ? 150 : 30) - p * 26).toFixed(0) + ') scale(' + s.toFixed(2) + ')">' +
+             '<path class="fn-pinna" d="' + LANCE + '"/></g>';
+        g += '<g transform="translate(' + px.toFixed(1) + ',' + py.toFixed(1) + ') rotate(' +
+             ((flip ? 210 : -30) + p * 26).toFixed(0) + ') scale(' + s.toFixed(2) + ')">' +
+             '<path class="fn-pinna" d="' + LANCE + '"/></g>';
+      }
+      return '<g class="bloom-open" style="--at:' + at.toFixed(4) + '">' + g + '</g>';
+    }
+
+    /* ---- placement ---- */
+
+    /* Static transform on the outer group, sway on the middle one, so neither
+       fights the CSS that animates opening. `back` pushes an item visually
+       further away: smaller, paler, nearer the outer edge. */
+    function place(inner, x, y, scale, back){
+      /* Only some plants sway. The animation runs every frame whether or not
+         you are scrolling, so swaying all hundred of them would burn the main
+         thread for no visual gain — a meadow where a few stems move and the
+         rest are still reads as natural anyway. */
+      var sways = rnd() < (back ? 0.18 : 0.45);
       return '<g transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) +
-             ') scale(' + scale.toFixed(3) + ')">' +
-               '<g class="bloom-plant" style="--sway:' + (7.5 + rnd() * 4).toFixed(1) +
-               's;--sway-delay:-' + (rnd() * 6).toFixed(1) + 's">' + g.join('') + '</g>' +
+               ') scale(' + scale.toFixed(3) + ')">' +
+               '<g class="bloom-rank' + (back ? ' is-back' : '') +
+                 (sways ? ' bloom-sway' : '') +
+                 '" style="--sway:' + (7 + rnd() * 5).toFixed(1) + 's;--sway-delay:-' +
+                 (rnd() * 7).toFixed(1) + 's">' + inner + '</g>' +
              '</g>';
     }
 
     function garden(height, side, W){
       var flip = side === 'right';
-      /* Centred in the measured gutter: a plant is ~40px wide either side of
-         its stem, and hugging the edge meant half of every flower was being
-         clipped by the layer's overflow. */
-      var baseX = W / 2;
-      /* Spacing keeps the element count sane: every petal restyles when
-         --grow changes, so a handful of larger plants rather than a dense
-         border of small ones. */
-      var gap = 700;
-      var n = Math.max(3, Math.round(height / gap));
+      var mid = W / 2;
       var parts = [];
 
-      for(var i = 0; i < n; i++){
-        var y = (i + 0.55) * (height / n);
-        var x = baseX + (rnd() - 0.5) * Math.min(30, W * 0.18);
-        /* Compress into the first 80% of the scroll so even the lowest
-           plants finish drawing their stem and opening by the page end. */
+      /* Organic rhythm rather than a fixed pitch: scenes of mixed species with
+         varied gaps, so the column reads as a meadow edge and not a row. */
+      var y = height * 0.06;
+      var guard = 0;
+      while(y < height * 0.99 && guard++ < 80){
         var at = Math.min(0.8, (y / height) * 0.8);
-        parts.push(plant(x, y, at, (0.85 + rnd() * 0.5) * Math.min(1.25, W / 150), flip));
+        var scene = pick(['feature', 'feature', 'spikes', 'drift', 'ferny']);
+        var inward = flip ? -1 : 1;
+
+        if(scene === 'feature'){
+          /* a Brahma Kamal with companions gathered at its foot */
+          parts.push(place(brahmaKamal(at), mid + inward * (rnd() * 8),
+                           y, 0.86 + rnd() * 0.4, false));
+          parts.push(place(anaphalis(at + 0.012), mid - inward * (16 + rnd() * 12),
+                           y + 4 + rnd() * 8, 0.8 + rnd() * 0.3, true));
+          if(rnd() < 0.6){
+            parts.push(place(bistorta(at + 0.008), mid + inward * (20 + rnd() * 12),
+                             y - 2, 0.7 + rnd() * 0.25, true));
+          }
+          y += 300 + rnd() * 120;
+
+        } else if(scene === 'spikes'){
+          var k = 2 + Math.floor(rnd() * 2);
+          for(var i = 0; i < k; i++){
+            parts.push(place(bistorta(at + i * 0.006),
+                             mid + (rnd() - 0.5) * (W * 0.42),
+                             y + i * (8 + rnd() * 10),
+                             0.78 + rnd() * 0.4, i > 0));
+          }
+          parts.push(place(anaphalis(at + 0.014), mid + (rnd() - 0.5) * (W * 0.4),
+                           y + 14 + rnd() * 10, 0.75 + rnd() * 0.3, true));
+          y += 205 + rnd() * 95;
+
+        } else if(scene === 'drift'){
+          var m = 2 + Math.floor(rnd() * 2);
+          for(var j = 0; j < m; j++){
+            parts.push(place(anaphalis(at + j * 0.005),
+                             mid + (rnd() - 0.5) * (W * 0.5),
+                             y + j * (10 + rnd() * 12),
+                             0.72 + rnd() * 0.4, j % 2 === 1));
+          }
+          y += 195 + rnd() * 85;
+
+        } else {
+          parts.push(place(fern(at, flip), mid + inward * (rnd() * 14),
+                           y, 0.8 + rnd() * 0.4, false));
+          if(rnd() < 0.7){
+            parts.push(place(anaphalis(at + 0.01), mid - inward * (14 + rnd() * 14),
+                             y + 6, 0.7 + rnd() * 0.3, true));
+          }
+          y += 215 + rnd() * 95;
+        }
       }
 
       return '<svg class="b-' + side + '" width="' + W + '" height="' + height + '" ' +
@@ -543,7 +663,6 @@
              '</svg>';
     }
 
-    var lastW = -1;
     function rebuild(){
       var h = root.offsetHeight, W = columnWidth();
       if(!h) return;
