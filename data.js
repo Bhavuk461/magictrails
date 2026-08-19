@@ -1,7 +1,10 @@
 // Central trek data. Folder names contain spaces -> encoded for URLs.
+// `theme` selects the trek-page treatment: 'journal' (printed field-journal,
+// on paper) or 'cinematic' (immersive, on dark). See trek.css.
 window.TREKS = [
   {
     slug: 'chopta-tungnath',
+    theme: 'journal',
     name: 'Chopta Tungnath',
     folder: 'Chandrashila Tungnath',
     price: '₹4,999',
@@ -26,6 +29,7 @@ window.TREKS = [
   },
   {
     slug: 'buran-ghati',
+    theme: 'cinematic',
     name: 'Buran Ghati',
     folder: 'Buran ghati',
     price: '₹16,000',
@@ -49,6 +53,7 @@ window.TREKS = [
   },
   {
     slug: 'roopkund',
+    theme: 'cinematic',
     name: 'Roopkund',
     folder: 'Roopkund trek',
     price: '₹16,000',
@@ -71,6 +76,7 @@ window.TREKS = [
   },
   {
     slug: 'kuari-pass',
+    theme: 'journal',
     name: 'Kuari Pass',
     folder: 'Kuari pass trek',
     price: '₹7,500',
