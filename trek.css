@@ -47,6 +47,12 @@ html[data-theme="bloom"]{
   --petal:#f2e7cf;
   --petal-edge:#d8caa6;
   --core:#c9953f;
+  /* Companions, taken off the Roopkund gallery photograph and muted so they
+     sit behind the text rather than competing with it. */
+  --bloom-rose:#9c3350;      /* Bistorta spikes */
+  --bloom-white:#fbf9f2;     /* Anaphalis rays */
+  --bloom-eye:#dcae4c;       /* Anaphalis centres */
+  --bloom-sage:#8fa86a;      /* fern */
 }
 html[data-theme="verdant"] body,
 html[data-theme="bloom"] body{
@@ -729,11 +735,33 @@ html[data-theme="nocturne"] body::after{z-index:0}
   transform:scale(clamp(0, (var(--grow) - var(--at,0) - .05) * 8, 1));
   transform-box:fill-box;transform-origin:50% 50%}
 
-/* A slow sway, so an opened flower is not simply frozen. Rotating the whole
-   plant from its base keeps the stem and head together. */
-.bloom-plant{
+/* Sway sits on its own element: it animates transform, so it cannot share an
+   element with the opening scale or with a static placement attribute. */
+.bloom-sway{
   transform-box:fill-box;transform-origin:50% 100%;
   animation:mtSway var(--sway,9s) ease-in-out var(--sway-delay,0s) infinite}
+/* Back rank reads as further away. Carried by .bloom-rank, which every plant
+   has, rather than .bloom-sway, which only the moving ones do. */
+.bloom-rank.is-back{opacity:.62}
+
+/* Companions open as one group rather than petal by petal, which keeps the
+   number of scroll-driven restyles down while adding four species. */
+.bloom-open{
+  opacity:calc((var(--grow) - var(--at,0)) * 14);
+  transform:scale(clamp(0, (var(--grow) - var(--at,0)) * 10, 1));
+  transform-box:fill-box;transform-origin:50% 100%}
+
+.bi-stem{fill:none;stroke:var(--vine,#5d7a4a);stroke-width:1.5;stroke-linecap:round;opacity:.75}
+.bi-spike{fill:var(--bloom-rose,#9c3350);opacity:.82}
+.bi-floret{fill:var(--bloom-rose,#9c3350);opacity:.5}
+.bi-leaf{fill:var(--leaf,#6f8f56);opacity:.7}
+
+.an-leaf{fill:var(--leaf,#6f8f56);opacity:.5}
+.an-ray{fill:var(--bloom-white,#fbf9f2);stroke:var(--petal-edge,#d8caa6);stroke-width:.35}
+.an-eye{fill:var(--bloom-eye,#dcae4c)}
+
+.fn-rachis{fill:none;stroke:var(--bloom-sage,#8fa86a);stroke-width:1.3;stroke-linecap:round;opacity:.7}
+.fn-pinna{fill:var(--bloom-sage,#8fa86a);opacity:.62}
 @keyframes mtSway{
   0%,100%{transform:rotate(-1.1deg)}
   50%    {transform:rotate(1.1deg)}
@@ -747,7 +775,8 @@ html[data-theme="nocturne"] body::after{z-index:0}
 }
 
 @media(prefers-reduced-motion:reduce){
-  .bloom-plant{animation:none}
+  .bloom-sway{animation:none}
   .bloom-stem{stroke-dashoffset:0}
   .bloom-petal,.bloom-core,.bloom-leaf{opacity:.9;transform:none}
+  .bloom-open{opacity:.85;transform:none}
 }
