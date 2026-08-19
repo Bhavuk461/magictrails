@@ -295,6 +295,23 @@
 
   var REDUCED = window.matchMedia('(prefers-reduced-motion:reduce)');
 
+  /* How much clear space sits between the viewport edge and the text column.
+     The ambience is drawn into that gutter; sizing it by measurement rather
+     than a fixed width is what stops the plants being clipped in half by the
+     layer's overflow, or straying under the prose on a narrow window. */
+  function marginColumn(){
+    var probe = root.querySelector('.body-wrap') || root.querySelector('.ledger__inner');
+    if(!probe) return 0;
+    var r = probe.getBoundingClientRect();
+    var pad = parseFloat(window.getComputedStyle(probe).paddingLeft) || 0;
+    return Math.max(0, r.left + pad);
+  }
+  function columnWidth(){
+    var m = marginColumn();
+    if(m < 74) return 0;                       /* nothing worth drawing */
+    return Math.max(112, Math.min(210, m - 10));
+  }
+
   if(theme === 'verdant') buildVines();
   if(theme === 'bloom') buildBlooms();
   if(theme === 'nocturne') buildStars();
@@ -308,22 +325,50 @@
 
     var lastH = 0;
 
-    function leaf(x, y, angle, at, alt){
+    /* Three lanceolate blades rather than one almond: asymmetric, drawn to a
+       point, each on a short petiole with a midrib and side veins. The whole
+       leaf animates as one group, so the extra detail costs no extra work
+       when --grow changes. */
+    var BLADES = [
+      { blade:'M4,0 C11,-11 25,-11 35,-1 C25,8 11,9 4,0 Z',
+        vein: 'M0,1 C2,0 3,0 4,0 M4,0 C14,-2 26,-2 35,-1 ' +
+              'M10,-4 C13,-6 16,-7 19,-7 M16,-2 C19,-4 23,-5 26,-5 ' +
+              'M11,3 C14,5 17,6 20,6 M18,2 C21,4 24,5 27,5' },
+      { blade:'M4,1 C10,-9 22,-13 32,-4 C24,6 11,9 4,1 Z',
+        vein: 'M0,2 C2,1 3,1 4,1 M4,1 C13,-3 24,-4 32,-4 ' +
+              'M10,-3 C13,-6 16,-8 19,-9 M17,-3 C20,-5 23,-7 25,-8 ' +
+              'M11,3 C14,4 17,5 19,5' },
+      { blade:'M4,0 C9,-8 19,-10 27,-2 C19,7 10,8 4,0 Z',
+        vein: 'M0,1 C2,0 3,0 4,0 M4,0 C11,-2 20,-2 27,-2 ' +
+              'M9,-3 C12,-5 14,-6 17,-6 M10,3 C13,4 15,5 18,5' }
+    ];
+
+    function leaf(x, y, angle, at, alt, variant, scale){
+      var b = BLADES[variant % BLADES.length];
+      /* Placement lives on the outer group. A CSS transform REPLACES an SVG
+         transform attribute, so anything the stylesheet animates has to sit
+         on its own element or every leaf collapses onto the origin. */
       return '<g transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) +
-             ') rotate(' + angle.toFixed(1) + ')">' +
-               '<path class="vine-leaf' + (alt ? ' is-alt' : '') + '" ' +
-                 'style="--at:' + at.toFixed(4) + '" ' +
-                 'd="M0,0 C7,-9 20,-12 28,0 C20,12 7,9 0,0 Z"/>' +
+               ') rotate(' + angle.toFixed(1) + ') scale(' + scale.toFixed(2) + ')">' +
+               '<g class="vine-leaf' + (alt ? ' is-alt' : '') + '" ' +
+                 'style="--at:' + at.toFixed(4) + '">' +
+                 '<path class="leaf-blade" d="' + b.blade + '"/>' +
+                 '<path class="leaf-vein" d="' + b.vein + '"/>' +
+               '</g>' +
              '</g>';
     }
 
     /* A sinuous stem with leaves alternating off each bend. Geometry is
        generated from the real page height so the waves keep their
        proportions instead of being stretched by preserveAspectRatio. */
-    function vine(height, side){
-      var W = 116;
-      var baseX = side === 'left' ? 34 : W - 34;
-      var amp = 26;
+    function vine(height, side, W){
+      /* Centre the stem in the measured gutter so leaves swing out on both
+         sides without touching either the viewport edge or the prose. */
+      var baseX = W / 2;
+      var amp = Math.min(26, W * 0.18);
+      /* Leaves must fit the gutter too: the SVG does not clip, so on a narrow
+         window full-size blades reach past the column and into the prose. */
+      var lf = Math.min(1, W / 160);
       var seg = 268;
       var n = Math.max(3, Math.ceil(height / seg));
       /* Cap below 1 so the final leaves reach full opacity by the page end:
@@ -345,9 +390,11 @@
            reading as a repeating pattern, and keeps the node count down:
            every leaf restyles when --grow changes. */
         var ly1 = y0 + seg * 0.30, ly2 = y0 + seg * 0.72;
-        parts.push(leaf(cx - 2 * dir, ly1, dir > 0 ? -34 : 214, at(ly1), i % 2 === 0));
+        parts.push(leaf(cx - 2 * dir, ly1, dir > 0 ? -32 : 212, at(ly1),
+                        i % 2 === 0, i, (0.95 + (i % 3) * 0.12) * lf));
         if(i % 3 !== 2){
-          parts.push(leaf(baseX, ly2, dir > 0 ? 152 : 28, at(ly2), i % 3 === 0));
+          parts.push(leaf(baseX, ly2, dir > 0 ? 150 : 30, at(ly2),
+                          i % 3 === 0, i + 1, (0.82 + (i % 2) * 0.16) * lf));
         }
       }
 
@@ -358,11 +405,13 @@
              '</svg>';
     }
 
+    var lastW = -1;
     function rebuild(){
-      var h = root.offsetHeight;
-      if(!h || Math.abs(h - lastH) < 40) return;   /* ignore trivial reflows */
-      lastH = h;
-      layer.innerHTML = vine(h, 'left') + vine(h, 'right');
+      var h = root.offsetHeight, W = columnWidth();
+      if(!h) return;
+      if(Math.abs(h - lastH) < 40 && W === lastW) return;  /* ignore trivial reflows */
+      lastH = h; lastW = W;
+      layer.innerHTML = W ? (vine(h, 'left', W) + vine(h, 'right', W)) : '';
     }
 
     var lastRun = 0;
@@ -456,16 +505,22 @@
       g.push('<g transform="translate(' + (lean * 0.4) + ',' + (-len) + ')">' +
              head.join('') + '</g>');
 
-      return '<g class="bloom-plant" transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) +
-             ') scale(' + scale.toFixed(3) + ')" ' +
-             'style="--sway:' + (7.5 + rnd() * 4).toFixed(1) + 's;--sway-delay:-' +
-             (rnd() * 6).toFixed(1) + 's">' + g.join('') + '</g>';
+      /* Placement on the outer group, sway on the inner one: the CSS animation
+         would otherwise replace this translate() and stack every plant on the
+         SVG origin, which is exactly why no flowers were visible. */
+      return '<g transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) +
+             ') scale(' + scale.toFixed(3) + ')">' +
+               '<g class="bloom-plant" style="--sway:' + (7.5 + rnd() * 4).toFixed(1) +
+               's;--sway-delay:-' + (rnd() * 6).toFixed(1) + 's">' + g.join('') + '</g>' +
+             '</g>';
     }
 
-    function garden(height, side){
-      var W = 124;
+    function garden(height, side, W){
       var flip = side === 'right';
-      var baseX = flip ? W - 40 : 40;
+      /* Centred in the measured gutter: a plant is ~40px wide either side of
+         its stem, and hugging the edge meant half of every flower was being
+         clipped by the layer's overflow. */
+      var baseX = W / 2;
       /* Spacing keeps the element count sane: every petal restyles when
          --grow changes, so a handful of larger plants rather than a dense
          border of small ones. */
@@ -475,11 +530,11 @@
 
       for(var i = 0; i < n; i++){
         var y = (i + 0.55) * (height / n);
-        var x = baseX + (rnd() - 0.5) * 34;
+        var x = baseX + (rnd() - 0.5) * Math.min(30, W * 0.18);
         /* Compress into the first 80% of the scroll so even the lowest
            plants finish drawing their stem and opening by the page end. */
         var at = Math.min(0.8, (y / height) * 0.8);
-        parts.push(plant(x, y, at, 0.9 + rnd() * 0.55, flip));
+        parts.push(plant(x, y, at, (0.85 + rnd() * 0.5) * Math.min(1.25, W / 150), flip));
       }
 
       return '<svg class="b-' + side + '" width="' + W + '" height="' + height + '" ' +
@@ -488,12 +543,14 @@
              '</svg>';
     }
 
+    var lastW = -1;
     function rebuild(){
-      var h = root.offsetHeight;
-      if(!h || Math.abs(h - lastH) < 40) return;
-      lastH = h;
+      var h = root.offsetHeight, W = columnWidth();
+      if(!h) return;
+      if(Math.abs(h - lastH) < 40 && W === lastW) return;
+      lastH = h; lastW = W;
       seed = 90210;                       /* same garden after a resize */
-      layer.innerHTML = garden(h, 'left') + garden(h, 'right');
+      layer.innerHTML = W ? (garden(h, 'left', W) + garden(h, 'right', W)) : '';
     }
 
     var lastRun = 0;
