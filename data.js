@@ -1,6 +1,15 @@
 // Central trek data. Folder names contain spaces -> encoded for URLs.
-// `theme` selects the trek-page treatment: 'journal' (printed field-journal,
-// on paper) or 'cinematic' (immersive, on dark). See trek.css.
+// `theme` selects the trek-page treatment, all defined in trek.css:
+//   journal  - printed field-journal on paper
+//   verdant  - beige-green, with leaf vines that grow as you scroll
+//   nocturne - night sky, glowing, with a drifting starfield
+//
+// Each gallery entry carries a `frame`, chosen for that specific photograph:
+//   mat      museum matting + inner hairline - formal, lets a strong frame breathe
+//   arch     arched top - architectural, sacred, or a sky-opening composition
+//   vignette soft feathered edge - mist, snowfall, haze
+//   deckle   torn deckle-edge paper - handmade, botanical, textural subjects
+//   film     35mm strip with sprockets - candid, first-person, documentary
 window.TREKS = [
   {
     slug: 'chopta-tungnath',
@@ -14,11 +23,13 @@ window.TREKS = [
     grade: 'Easy',
     tagline: 'The world\'s highest Shiva temple, wrapped in meadow and mist.',
     gallery: [
-      'Screenshot 2026-06-14 230258.webp',
-      'Screenshot 2026-06-14 230502.webp',
-      'Screenshot_20260614_230825_Photos.jpg.webp',
-      'Screenshot_20260614_231354_Photos.jpg.webp',
-      'Screenshot_20260614_231800_Photos.jpg.webp'
+      // the Tungnath shrine, prayer flags and cairns against the snow range
+      { src: 'Screenshot 2026-06-14 230258.webp', frame: 'arch' },
+      { src: 'Screenshot 2026-06-14 230502.webp', frame: 'mat' },
+      // a bird riding the thermals over hazy forested ridges
+      { src: 'Screenshot_20260614_230825_Photos.jpg.webp', frame: 'vignette' },
+      { src: 'Screenshot_20260614_231354_Photos.jpg.webp', frame: 'deckle' },
+      { src: 'Screenshot_20260614_231800_Photos.jpg.webp', frame: 'film' }
     ],
     intro: 'If the Himalaya has a gentle door, this is it. Chopta is a rolling carpet of emerald meadow stitched with rhododendron, and above it floats Tungnath \u2014 the highest temple to Shiva on earth. A short, soulful climb to Chandrashila rewards you with a 360\u00b0 amphitheatre of giants: Nanda Devi, Trishul, Chaukhamba, all standing to attention at dawn.',
     sections: [
@@ -29,7 +40,7 @@ window.TREKS = [
   },
   {
     slug: 'buran-ghati',
-    theme: 'cinematic',
+    theme: 'verdant',
     name: 'Buran Ghati',
     folder: 'Buran ghati',
     price: '₹16,000',
@@ -39,10 +50,11 @@ window.TREKS = [
     grade: 'Moderate \u2013 Difficult',
     tagline: 'A dramatic pass crossing that ends in a 400-metre snow rappel.',
     gallery: [
-      'IMG_5135.webp',
-      'IMG_5570.webp',
-      'IMG_5715_Original_SnapseedCopy.webp',
-      'IMG_5924_Original_SnapseedCopy_SnapseedCopy.webp'
+      // chai in hand, meadow underfoot, the wall of peaks beyond
+      { src: 'IMG_5135.webp', frame: 'film' },
+      { src: 'IMG_5570.webp', frame: 'mat' },
+      { src: 'IMG_5715_Original_SnapseedCopy.webp', frame: 'deckle' },
+      { src: 'IMG_5924_Original_SnapseedCopy_SnapseedCopy.webp', frame: 'arch' }
     ],
     intro: 'Buran Ghati is a trek of contrasts and crescendos. It begins in the apple-scented village of Janglik, drifts through cathedral forests and the dreamy Dayara meadows, then climbs to the glacial mirror of Chandranahan. The finale is pure adrenaline: a steep, rope-assisted descent down the icy wall of the Buran Pass itself.',
     sections: [
@@ -53,7 +65,7 @@ window.TREKS = [
   },
   {
     slug: 'roopkund',
-    theme: 'cinematic',
+    theme: 'verdant',
     name: 'Roopkund',
     folder: 'Roopkund trek',
     price: '₹16,000',
@@ -63,9 +75,11 @@ window.TREKS = [
     grade: 'Difficult',
     tagline: 'The mysterious skeleton lake beneath Trishul and Nanda Ghunti.',
     gallery: [
-      'FullSizeRender.webp',
-      'IMG_9906.webp',
-      'IMG_9993.webp'
+      { src: 'FullSizeRender.webp', frame: 'vignette' },
+      // the lake itself - documentary, so nothing decorative around it
+      { src: 'IMG_9906.webp', frame: 'mat' },
+      // Brahma Kamal in bloom; a pressed-herbarium edge suits it
+      { src: 'IMG_9993.webp', frame: 'deckle' }
     ],
     intro: 'High in the cradle of Trishul lies a small glacial tarn that has puzzled the world for decades \u2014 Roopkund, the Skeleton Lake, scattered with ancient human bones. Getting there is one of the most rewarding climbs in the Indian Himalaya: through the legendary meadows of Ali and Bedni Bugyal, ever upward to a frozen, history-haunted basin above 5,000 m.',
     sections: [
@@ -76,7 +90,7 @@ window.TREKS = [
   },
   {
     slug: 'kuari-pass',
-    theme: 'journal',
+    theme: 'nocturne',
     name: 'Kuari Pass',
     folder: 'Kuari pass trek',
     price: '₹7,500',
@@ -86,10 +100,11 @@ window.TREKS = [
     grade: 'Easy \u2013 Moderate',
     tagline: 'Lord Curzon\'s trail and the grandest balcony view of Nanda Devi.',
     gallery: [
-      'IMG_0019_Original.webp',
-      'IMG_0038_Original.webp',
-      'IMG_0043_Original.webp',
-      'IMG_3717_Original.webp'
+      { src: 'IMG_0019_Original.webp', frame: 'mat' },
+      // a tent taking the weather, seen through falling snow
+      { src: 'IMG_0038_Original.webp', frame: 'vignette' },
+      { src: 'IMG_0043_Original.webp', frame: 'film' },
+      { src: 'IMG_3717_Original.webp', frame: 'arch' }
     ],
     intro: 'Walked and loved by Lord Curzon over a century ago, the Kuari Pass is still the connoisseur\u2019s winter trek. It threads through ancient oak and rhododendron forest, opens onto wide ridgeline campsites, and delivers a front-row, panoramic stare at Nanda Devi \u2014 the second-highest peak in India \u2014 along with Dronagiri, Kamet and Hathi-Ghoda.',
     sections: [

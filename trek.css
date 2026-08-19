@@ -1,11 +1,13 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    TREK DETAIL PAGE
 
-   One design system, two grounds. `journal` is a printed field-journal on
-   paper; `cinematic` is an immersive dark cut. They share every component
-   below — type scale, hairline rules, ledger, gallery, rail — and diverge
-   only in ground, hero shape and density. The theme comes from data.js and
-   lands on <html data-theme>.
+   One design system, three grounds:
+     journal   printed field-journal on paper
+     verdant   beige-green, with leaf vines that grow as you scroll
+     nocturne  night sky, glowing, with a drifting starfield
+   They share every component below — type scale, hairline rules, ledger,
+   gallery, frames, rail — and diverge only in ground, hero shape, density
+   and ambience. The theme comes from data.js and lands on <html data-theme>.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root{
@@ -27,35 +29,62 @@
    Display sizes look markedly better at the high end of it. */
 h1,h2,h3{font-optical-sizing:auto}
 
-/* ---- cinematic ground: retune the shared tokens, everything else follows ---- */
-html[data-theme="cinematic"]{
-  --bg:#141009;
-  --bg-2:#1b160e;
-  --surface:#221b12;
-  --ink:#f4ead8;
-  --ink-soft:#c6b8a1;
-  --muted:#9a8c7b;   /* 5.79:1 on the dark ground */
-  --line:#3b3226;
-  --accent:#c9853c;
-  --accent-deep:#e3a866;   /* "deep" means *legible on the ground* — inverted here */
+/* ---- verdant: beige shifted green. Retune the shared tokens and the rest
+   of the system follows without per-theme rules. ---- */
+html[data-theme="verdant"]{
+  --bg:#eef0e2;
+  --bg-2:#e4e8d5;
+  --surface:#f7f8ef;
+  --ink:#26301f;
+  --ink-soft:#4a5641;
+  --muted:#626b55;         /* 4.85:1 on --bg, 5.23:1 on --surface */
+  --line:#d3d9c2;
+  --accent:#5d7a4a;
+  --accent-deep:#3f5732;
+  --vine:#5d7a4a;
+  --leaf:#6f8f56;
 }
-html[data-theme="cinematic"] body{
+html[data-theme="verdant"] body{
   background-color:var(--bg);
-  background-image:radial-gradient(120% 80% at 50% -10%, #211a11 0%, var(--bg) 45%, #0e0b06 100%);
+  background-image:radial-gradient(120% 80% at 50% -10%, #f4f6ea 0%, var(--bg) 45%, var(--bg-2) 100%);
 }
-html[data-theme="cinematic"] .site-header{
-  background:rgba(20,16,9,.72);
-  box-shadow:0 1px 0 rgba(255,255,255,.05)}
-html[data-theme="cinematic"] .nav-cta:hover{color:#1a1409}
-html[data-theme="cinematic"] .btn-primary{color:#1a1409}
-html[data-theme="cinematic"] ::selection{background:var(--accent);color:#1a1409}
+
+/* ---- nocturne: night. Warm amber accent keeps it recognisably MagicTrails
+   rather than a generic blue dark mode. ---- */
+html[data-theme="nocturne"]{
+  --bg:#0b1020;
+  --bg-2:#121a30;
+  --surface:#161f38;
+  --ink:#e8eefc;
+  --ink-soft:#b6c2dc;
+  --muted:#8b98b6;         /* 6.55:1 on --bg */
+  --line:#2a3550;
+  --accent:#d9a441;
+  --accent-deep:#f0c274;   /* "deep" means legible on the ground — inverted here */
+}
+html[data-theme="nocturne"] body{
+  background-color:var(--bg);
+  background-image:
+    radial-gradient(90% 55% at 78% -8%, rgba(217,164,65,.16) 0%, transparent 60%),
+    radial-gradient(120% 80% at 50% 0%, #16203c 0%, var(--bg) 45%, #070a15 100%);
+}
+html[data-theme="nocturne"] .site-header{
+  background:rgba(11,16,32,.74);
+  box-shadow:0 1px 0 rgba(255,255,255,.06)}
+/* Amber is far too light for white text: #0b1020 on it is 8.42:1. */
+html[data-theme="nocturne"] .btn-primary,
+html[data-theme="nocturne"] .nav-cta:hover,
+html[data-theme="nocturne"] .bookbar__cta{color:#0b1020}
+html[data-theme="nocturne"] ::selection{background:var(--accent);color:#0b1020}
+html[data-theme="verdant"] ::selection{background:var(--accent);color:#fff}
 
 /* Grain sits above the ground, below content. */
 body::after{
   content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   background-image:var(--grain);background-size:160px 160px;
   opacity:.16;mix-blend-mode:multiply}
-html[data-theme="cinematic"] body::after{opacity:.2;mix-blend-mode:overlay}
+html[data-theme="nocturne"] body::after{opacity:.22;mix-blend-mode:overlay}
+html[data-theme="verdant"] body::after{opacity:.14}
 #trek-root,.site-header,.site-footer,.bookbar{position:relative;z-index:1}
 
 .loading{min-height:60svh;display:flex;align-items:center;justify-content:center;
@@ -111,21 +140,21 @@ html[data-theme="cinematic"] body::after{opacity:.2;mix-blend-mode:overlay}
   padding-top:10px;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;
   color:var(--muted)}
 
-/* ═══ hero — cinematic ════════════════════════════════════════════════════ */
+/* ═══ hero — full-bleed (verdant + nocturne) ══════════════════════════════ */
 
-.hero-cine{position:relative;min-height:100svh;display:flex;align-items:flex-end;overflow:hidden}
-.hero-cine .plate{position:absolute;inset:0}
-.hero-cine .plate img{width:100%;height:100%;object-fit:cover;object-position:center 45%}
-.hero-cine .plate__veil{
+.hero-full{position:relative;min-height:100svh;display:flex;align-items:flex-end;overflow:hidden}
+.hero-full .plate{position:absolute;inset:0}
+.hero-full .plate img{width:100%;height:100%;object-fit:cover;object-position:center 45%}
+.hero-full .plate__veil{
   position:absolute;inset:0;
   background:linear-gradient(180deg,rgba(10,8,4,.55) 0%,rgba(10,8,4,.15) 35%,rgba(14,11,6,.82) 82%,var(--bg) 100%)}
-.hero-cine__inner{
+.hero-full__inner{
   position:relative;z-index:2;width:100%;max-width:var(--wrap);
   margin:0 auto;padding:0 var(--gutter) clamp(72px,12vh,130px)}
-.hero-cine .display{color:#fff7ea;margin-top:18px;text-shadow:0 4px 34px rgba(0,0,0,.5)}
-.hero-cine .eyebrow{color:rgba(255,236,208,.75)}
-.hero-cine .eyebrow .n{color:#e9b878}
-.hero-cine .tagline{color:#efe2cd;margin-top:20px;text-shadow:0 2px 18px rgba(0,0,0,.5)}
+.hero-full .display{color:#fff7ea;margin-top:18px;text-shadow:0 4px 34px rgba(0,0,0,.5)}
+.hero-full .eyebrow{color:rgba(255,236,208,.75)}
+.hero-full .eyebrow .n{color:#e9b878}
+.hero-full .tagline{color:#efe2cd;margin-top:20px;text-shadow:0 2px 18px rgba(0,0,0,.5)}
 .scroll-cue{
   position:absolute;left:50%;bottom:26px;z-index:2;
   width:1px;height:44px;background:linear-gradient(rgba(255,247,234,0),rgba(255,247,234,.6));
@@ -236,8 +265,11 @@ html[data-theme="journal"] .prose .intro::first-letter{
   float:left;font-family:'Fraunces',Georgia,serif;font-weight:600;
   font-size:4.1em;line-height:.78;
   padding:.04em .1em 0 0;color:var(--accent)}
-html[data-theme="cinematic"] .prose .intro::first-line{
-  letter-spacing:.01em}
+html[data-theme="verdant"] .prose .intro::first-letter,
+html[data-theme="nocturne"] .prose .intro::first-letter{
+  float:left;font-family:'Fraunces',Georgia,serif;font-weight:600;
+  font-size:4.1em;line-height:.78;
+  padding:.04em .1em 0 0;color:var(--accent-deep)}
 
 .chapter{margin-top:clamp(44px,6vw,72px)}
 .chapter p{
@@ -288,29 +320,17 @@ html[data-theme="cinematic"] .prose .intro::first-line{
 @media(hover:hover){ .shot__btn:hover img{transform:scale(1.03)} }
 .shot__btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .shot figcaption{
-  position:absolute;left:10px;bottom:8px;
-  font-size:.64rem;letter-spacing:.2em;color:#fff7ea;
-  text-shadow:0 1px 8px rgba(0,0,0,.8);font-variant-numeric:tabular-nums;
-  pointer-events:none}
+  margin-top:9px;
+  font-size:.62rem;letter-spacing:.22em;color:var(--muted);
+  font-variant-numeric:tabular-nums;pointer-events:none}
 
 .gallery__lead{margin-bottom:14px}
 .gallery__lead .shot__btn img{aspect-ratio:16/10}
 .gallery__grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
 .gallery__grid .shot__btn img{aspect-ratio:4/5}
 
-html[data-theme="journal"] .shot__btn{border:var(--rule);background:var(--surface)}
-html[data-theme="journal"] .shot__btn img{padding:0}
-html[data-theme="cinematic"] .gallery{max-width:none;padding-left:0;padding-right:0}
-html[data-theme="cinematic"] .gallery .sec-title{
-  max-width:var(--wrap);margin-left:auto;margin-right:auto;
-  padding-left:var(--gutter);padding-right:var(--gutter)}
-@media(min-width:1000px){
-  html[data-theme="cinematic"] .gallery .sec-title{padding-left:calc(var(--gutter) + 76px)}
-  html[data-theme="cinematic"] .gallery .sec-title .num{left:var(--gutter)}
-}
-html[data-theme="cinematic"] .gallery__lead,
-html[data-theme="cinematic"] .gallery__grid{padding:0 clamp(0px,1.2vw,18px)}
-html[data-theme="cinematic"] .gallery__lead .shot__btn img{aspect-ratio:2/1}
+/* Frames need margin to read as frames, so the gallery stays contained on
+   every theme; the per-image treatments live in the FRAMES section below. */
 
 /* ═══ lightbox ════════════════════════════════════════════════════════════ */
 
@@ -364,7 +384,7 @@ html[data-theme="cinematic"] .gallery__lead .shot__btn img{aspect-ratio:2/1}
 .band__price small{
   display:block;font-family:'Manrope',sans-serif;font-size:.66rem;letter-spacing:.22em;
   text-transform:uppercase;color:var(--muted);margin-top:8px}
-html[data-theme="cinematic"] .band{background:var(--bg-2)}
+html[data-theme="nocturne"] .band{background:var(--bg-2)}
 
 /* ═══ next trail ══════════════════════════════════════════════════════════ */
 
@@ -418,7 +438,6 @@ html[data-theme="cinematic"] .band{background:var(--bg-2)}
 .bookbar__cta{
   background:var(--accent);color:#fff;font-weight:600;font-size:.92rem;
   padding:13px 26px;border-radius:40px;white-space:nowrap}
-html[data-theme="cinematic"] .bookbar__cta{color:#1a1409}
 /* Keep the bar off the footer. */
 .site-footer{padding-bottom:calc(30px + 68px + env(safe-area-inset-bottom,0px))}
 @media(min-width:1100px){ .site-footer{padding-bottom:30px} }
@@ -428,7 +447,7 @@ html[data-theme="cinematic"] .bookbar__cta{color:#1a1409}
 @media(max-width:900px){
   .hero-journal{padding-top:calc(88px + env(safe-area-inset-top,0px))}
   .hero-journal .plate{padding:7px}
-  .hero-cine__inner{padding-bottom:clamp(56px,10vh,92px)}
+  .hero-full__inner{padding-bottom:clamp(56px,10vh,92px)}
   .facts .row{grid-template-columns:1fr;gap:4px;padding:14px 0}
   .facts dt{padding-top:0}
   .chapter p{font-size:1rem}
@@ -446,4 +465,161 @@ html[data-theme="cinematic"] .bookbar__cta{color:#1a1409}
 @media(prefers-reduced-motion:reduce){
   .scroll-cue i{animation:none}
   .alt-bar i{transition:none}
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FRAMES
+   Five treatments, assigned per photograph in data.js. They are built from
+   the shared tokens, so each one restyles itself on all three grounds
+   rather than needing a per-theme copy.
+     mat       museum matting + inner hairline
+     arch      arched top
+     vignette  soft feathered edge
+     deckle    torn deckle-edge paper
+     film      35mm strip with sprockets
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.shot{--frame-pad:clamp(10px,1.4vw,18px)}
+.shot__btn{position:relative;transition:transform .6s var(--ease)}
+@media(hover:hover){
+  .shot__btn:hover{transform:translateY(-3px)}
+  .shot__btn:hover img{transform:scale(1.03)}
+}
+
+/* ---- mat: a deep paper mat with a hairline right against the image ---- */
+.frame-mat .shot__btn{
+  padding:var(--frame-pad);
+  background:var(--surface);
+  border:1px solid var(--line);
+  box-shadow:var(--shadow-sm)}
+.frame-mat .shot__btn img{
+  outline:1px solid var(--line);outline-offset:0}
+
+/* ---- arch: an arched top, for architectural or sky-opening compositions ---- */
+.frame-arch .shot__btn{
+  padding:var(--frame-pad);
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:50% 50% 4px 4px / 26% 26% 4px 4px;
+  box-shadow:var(--shadow-sm)}
+.frame-arch .shot__btn img{
+  border-radius:50% 50% 2px 2px / 26% 26% 2px 2px}
+
+/* ---- vignette: no hard edge at all, for mist, snowfall and haze ---- */
+.frame-vignette .shot__btn{padding:0;background:none;border:0}
+.frame-vignette .shot__btn img{
+  -webkit-mask-image:radial-gradient(120% 116% at 50% 50%, #000 56%, transparent 97%);
+  mask-image:radial-gradient(120% 116% at 50% 50%, #000 56%, transparent 97%)}
+
+/* ---- deckle: torn paper. The turbulence filter roughs up the paper backing
+   only, so the photograph itself stays undistorted on top. ---- */
+.frame-deckle .shot__btn{padding:calc(var(--frame-pad) + 4px);background:none;border:0}
+.frame-deckle .shot__btn::before{
+  content:'';position:absolute;inset:0;z-index:0;
+  background:var(--surface);
+  filter:url(#mt-deckle) drop-shadow(0 6px 18px rgba(40,34,20,.16))}
+.frame-deckle .shot__btn img{position:relative;z-index:1}
+
+/* ---- film: a 35mm strip, for candid and first-person frames ---- */
+.frame-film .shot__btn{
+  padding:20px 12px;
+  background:#17150f;
+  border-radius:3px;
+  box-shadow:var(--shadow-sm)}
+.frame-film .shot__btn::before,
+.frame-film .shot__btn::after{
+  content:'';position:absolute;left:8px;right:8px;height:9px;
+  /* sprocket holes */
+  background-image:repeating-linear-gradient(90deg,
+    rgba(255,255,255,.82) 0 7px, transparent 7px 17px);
+  border-radius:1px;opacity:.9}
+.frame-film .shot__btn::before{top:6px}
+.frame-film .shot__btn::after{bottom:6px}
+.frame-film figcaption{color:var(--muted)}
+
+/* Frames sit on paper, so the lead image no longer needs to run edge to edge. */
+.gallery__lead .shot__btn img{aspect-ratio:16/10}
+@media(max-width:620px){
+  .shot{--frame-pad:8px}
+  .frame-film .shot__btn{padding:15px 8px}
+  .frame-film .shot__btn::before,.frame-film .shot__btn::after{height:6px;
+    background-image:repeating-linear-gradient(90deg,
+      rgba(255,255,255,.82) 0 5px, transparent 5px 12px)}
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AMBIENCE — verdant vines
+   An SVG stem down each margin, drawn with pathLength="1" so --grow maps
+   straight onto stroke-dashoffset. Leaves open just after the stem passes
+   them: opacity and scale are driven off (--grow - --at), which the browser
+   clamps for us, so no per-leaf JS is needed.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.vines{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  overflow:hidden;
+  --grow:0}
+.vines svg{position:absolute;top:0;height:100%;overflow:visible}
+.vines .v-left{left:0}
+.vines .v-right{right:0}
+.vine-stem{
+  fill:none;
+  stroke:var(--vine,#5d7a4a);
+  stroke-width:2.2;
+  stroke-linecap:round;
+  opacity:.5;
+  stroke-dasharray:1;
+  stroke-dashoffset:calc(1 - var(--grow))}
+.vine-leaf{
+  fill:var(--leaf,#6f8f56);
+  opacity:calc((var(--grow) - var(--at,0)) * 12);
+  transform:scale(clamp(0, (var(--grow) - var(--at,0)) * 9, 1));
+  transform-box:fill-box;transform-origin:0% 50%}
+.vine-leaf.is-alt{fill:var(--vine,#5d7a4a);opacity:calc((var(--grow) - var(--at,0)) * 9)}
+
+/* Content must always sit above the vines. */
+html[data-theme="verdant"] #trek-root > *{position:relative;z-index:1}
+
+@media(max-width:900px){
+  /* Narrow margins would put vines under the text, so only one side runs. */
+  .vines .v-right{display:none}
+  .vine-stem{opacity:.34;stroke-width:1.8}
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AMBIENCE — nocturne starfield
+   Fixed layer, opacity-only animation so it stays on the compositor.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.sky{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.sky__star{
+  position:absolute;border-radius:50%;
+  background:#fff;
+  animation:mtTwinkle var(--dur,4s) ease-in-out var(--delay,0s) infinite}
+.sky__star.is-warm{background:#ffd9a0}
+@keyframes mtTwinkle{
+  0%,100%{opacity:var(--min,.15)}
+  50%    {opacity:var(--max,.9)}
+}
+/* A single slow streak, rarely — enough to feel alive, not a screensaver. */
+.sky__shoot{
+  position:absolute;width:150px;height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.85));
+  opacity:0;
+  animation:mtShoot 14s ease-in var(--delay,6s) infinite}
+@keyframes mtShoot{
+  0%,88%   {opacity:0;transform:translate3d(0,0,0) rotate(18deg)}
+  90%      {opacity:.9}
+  100%     {opacity:0;transform:translate3d(-320px,110px,0) rotate(18deg)}
+}
+html[data-theme="nocturne"] #trek-root > *{position:relative;z-index:1}
+/* The grain would dull the stars. */
+html[data-theme="nocturne"] body::after{z-index:0}
+
+@media(prefers-reduced-motion:reduce){
+  .sky__star{animation:none;opacity:var(--max,.7)}
+  .sky__shoot{display:none}
+  .vine-stem{stroke-dashoffset:0}
+  .vine-leaf{opacity:.85;transform:none}
 }

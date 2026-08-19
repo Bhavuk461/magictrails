@@ -16,6 +16,11 @@
 
   var esc   = MT.esc;
   var theme = t.theme || 'journal';
+  /* Gallery entries carry a per-photograph frame; older data used bare
+     filenames, so normalise both shapes to one. */
+  var shots = (t.gallery || []).map(function(g){
+    return typeof g === 'string' ? { src: g, frame: 'mat' } : g;
+  });
   var next  = treks[(idx + 1) % treks.length];
 
   /* ---------- head ---------- */
@@ -71,12 +76,12 @@
                 '<span>' + esc(t.altitude) + '</span>';
 
   var hero;
-  if(theme === 'cinematic'){
+  if(theme !== 'journal'){
     /* Full-bleed plate, name set over the photograph. */
     hero =
-      '<header class="hero-cine">' +
+      '<header class="hero-full">' +
         '<div class="plate">' + heroImg + '<div class="plate__veil"></div></div>' +
-        '<div class="hero-cine__inner">' +
+        '<div class="hero-full__inner">' +
           '<p class="eyebrow reveal">' + eyebrow + '</p>' +
           '<h1 class="display reveal">' + esc(t.name) + '</h1>' +
           '<p class="tagline reveal">' + esc(t.tagline) + '</p>' +
@@ -188,13 +193,13 @@
 
   /* ---------- gallery ---------- */
   var gallery = '';
-  if(t.gallery && t.gallery.length){
-    var lead = t.gallery[0];
-    var rest = t.gallery.slice(1);
-    var mk = function(file, i, sizes){
-      return '<figure class="shot" data-i="' + i + '">' +
-          '<button type="button" class="shot__btn" aria-label="Open photo ' + (i + 1) + ' of ' + t.gallery.length + '">' +
-            MT.img(t.folder + '/' + file, { alt: t.name + ', photo ' + (i + 1), sizes: sizes }) +
+  if(shots.length){
+    var lead = shots[0];
+    var rest = shots.slice(1);
+    var mk = function(item, i, sizes){
+      return '<figure class="shot frame-' + (item.frame || 'mat') + '" data-i="' + i + '">' +
+          '<button type="button" class="shot__btn" aria-label="Open photo ' + (i + 1) + ' of ' + shots.length + '">' +
+            MT.img(t.folder + '/' + item.src, { alt: t.name + ', photo ' + (i + 1), sizes: sizes }) +
           '</button>' +
           '<figcaption>' + String(i + 1).padStart(2, '0') + '</figcaption>' +
         '</figure>';
@@ -265,8 +270,166 @@
     '<a class="bookbar__cta" href="' + mailto() + '">Reserve</a>';
   document.body.appendChild(bar);
 
+  /* The deckle frame displaces a paper backing with this filter. Only
+     emitted when a photograph actually uses it. */
+  if(shots.some(function(g){ return g.frame === 'deckle'; })){
+    var defs = document.createElement('div');
+    defs.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+    defs.setAttribute('aria-hidden', 'true');
+    defs.innerHTML =
+      '<svg width="0" height="0" focusable="false">' +
+        '<filter id="mt-deckle" x="-8%" y="-8%" width="116%" height="116%">' +
+          '<feTurbulence type="fractalNoise" baseFrequency="0.021" numOctaves="4" seed="7" result="n"/>' +
+          '<feDisplacementMap in="SourceGraphic" in2="n" scale="11" xChannelSelector="R" yChannelSelector="G"/>' +
+        '</filter>' +
+      '</svg>';
+    document.body.appendChild(defs);
+  }
+
+  /* ---------- ambience ----------
+     verdant grows leaf vines down both margins as you scroll; nocturne
+     drifts a starfield behind the page. Both are decorative, both are
+     silenced by prefers-reduced-motion, and neither is built on mobile
+     where the margins are too narrow (vines) to read. */
+
+  var REDUCED = window.matchMedia('(prefers-reduced-motion:reduce)');
+
+  if(theme === 'verdant') buildVines();
+  if(theme === 'nocturne') buildStars();
+
+  /* --- verdant --- */
+  function buildVines(){
+    var layer = document.createElement('div');
+    layer.className = 'vines';
+    layer.setAttribute('aria-hidden', 'true');
+    root.appendChild(layer);
+
+    var lastH = 0;
+
+    function leaf(x, y, angle, at, alt){
+      return '<g transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) +
+             ') rotate(' + angle.toFixed(1) + ')">' +
+               '<path class="vine-leaf' + (alt ? ' is-alt' : '') + '" ' +
+                 'style="--at:' + at.toFixed(4) + '" ' +
+                 'd="M0,0 C7,-9 20,-12 28,0 C20,12 7,9 0,0 Z"/>' +
+             '</g>';
+    }
+
+    /* A sinuous stem with leaves alternating off each bend. Geometry is
+       generated from the real page height so the waves keep their
+       proportions instead of being stretched by preserveAspectRatio. */
+    function vine(height, side){
+      var W = 116;
+      var baseX = side === 'left' ? 34 : W - 34;
+      var amp = 26;
+      var seg = 268;
+      var n = Math.max(3, Math.ceil(height / seg));
+      /* Cap below 1 so the final leaves reach full opacity by the page end:
+         the opacity ramp is (grow - at) * 12. */
+      var at = function(y){ return Math.min(0.9, y / height); };
+      var inward = side === 'left' ? 1 : -1;
+      var d = 'M ' + baseX + ' 0';
+      var parts = [];
+
+      for(var i = 0; i < n; i++){
+        var y0 = i * seg, y1 = y0 + seg;
+        var dir = (i % 2 ? -1 : 1) * inward;
+        var cx = baseX + amp * dir;
+        d += ' C ' + cx + ' ' + (y0 + seg * 0.34) +
+             ', ' + cx + ' ' + (y0 + seg * 0.66) +
+             ', ' + baseX + ' ' + y1;
+
+        /* Leaves off the outside of each bend. Skipping some keeps it from
+           reading as a repeating pattern, and keeps the node count down:
+           every leaf restyles when --grow changes. */
+        var ly1 = y0 + seg * 0.30, ly2 = y0 + seg * 0.72;
+        parts.push(leaf(cx - 2 * dir, ly1, dir > 0 ? -34 : 214, at(ly1), i % 2 === 0));
+        if(i % 3 !== 2){
+          parts.push(leaf(baseX, ly2, dir > 0 ? 152 : 28, at(ly2), i % 3 === 0));
+        }
+      }
+
+      return '<svg class="v-' + side + '" width="' + W + '" height="' + height + '" ' +
+               'viewBox="0 0 ' + W + ' ' + height + '" fill="none" aria-hidden="true">' +
+               '<path class="vine-stem" pathLength="1" d="' + d + '"/>' +
+               parts.join('') +
+             '</svg>';
+    }
+
+    function rebuild(){
+      var h = root.offsetHeight;
+      if(!h || Math.abs(h - lastH) < 40) return;   /* ignore trivial reflows */
+      lastH = h;
+      layer.innerHTML = vine(h, 'left') + vine(h, 'right');
+    }
+
+    var lastRun = 0;
+    function onScroll(){
+      var now = (window.performance || Date).now();
+      if(now - lastRun < 16) return;
+      lastRun = now;
+      var r = root.getBoundingClientRect();
+      var span = r.height - window.innerHeight;
+      var p = span > 0 ? (-r.top) / span : 1;
+      /* lead slightly, so a leaf has opened by the time you reach it */
+      layer.style.setProperty('--grow', Math.max(0, Math.min(1, p * 1.04 + 0.05)).toFixed(4));
+    }
+
+    rebuild();
+    if(REDUCED.matches){
+      layer.style.setProperty('--grow', '1');
+    } else {
+      onScroll();
+      window.addEventListener('scroll', onScroll, { passive: true });
+    }
+
+    var rt;
+    window.addEventListener('resize', function(){
+      clearTimeout(rt);
+      rt = setTimeout(function(){ rebuild(); onScroll(); }, 180);
+    }, { passive: true });
+
+    /* Images landing changes the page height, so redraw once they settle. */
+    window.addEventListener('load', function(){ rebuild(); onScroll(); });
+  }
+
+  /* --- nocturne --- */
+  function buildStars(){
+    var sky = document.createElement('div');
+    sky.className = 'sky';
+    sky.setAttribute('aria-hidden', 'true');
+
+    /* Deterministic placement: the same trek looks the same on every visit. */
+    var seed = 1337;
+    function rnd(){
+      seed = (seed * 16807) % 2147483647;
+      return (seed - 1) / 2147483646;
+    }
+
+    var count = window.innerWidth < 700 ? 46 : 78;
+    var html = '';
+    for(var i = 0; i < count; i++){
+      var size = rnd() < 0.86 ? (1 + rnd() * 1.3) : (2 + rnd() * 1.6);
+      var warm = rnd() < 0.22;
+      html += '<span class="sky__star' + (warm ? ' is-warm' : '') + '" style="' +
+        'left:' + (rnd() * 100).toFixed(2) + '%;' +
+        'top:' + (rnd() * 100).toFixed(2) + '%;' +
+        'width:' + size.toFixed(2) + 'px;height:' + size.toFixed(2) + 'px;' +
+        '--dur:' + (2.8 + rnd() * 4.5).toFixed(2) + 's;' +
+        '--delay:' + (rnd() * 6).toFixed(2) + 's;' +
+        '--min:' + (0.06 + rnd() * 0.16).toFixed(2) + ';' +
+        '--max:' + (0.5 + rnd() * 0.5).toFixed(2) + ';' +
+        '"></span>';
+    }
+    html += '<span class="sky__shoot" style="left:76%;top:12%;--delay:7s"></span>';
+    html += '<span class="sky__shoot" style="left:38%;top:5%;--delay:19s"></span>';
+
+    sky.innerHTML = html;
+    document.body.appendChild(sky);
+  }
+
   /* ---------- lightbox ---------- */
-  if(t.gallery && t.gallery.length) buildLightbox();
+  if(shots.length) buildLightbox();
 
   function buildLightbox(){
     var box = document.createElement('div');
@@ -291,10 +454,10 @@
     var at = 0, trigger = null;
 
     function render(){
-      stage.innerHTML = MT.img(t.folder + '/' + t.gallery[at], {
+      stage.innerHTML = MT.img(t.folder + '/' + shots[at].src, {
         alt: t.name + ', photo ' + (at + 1), sizes: '100vw', loading: 'eager'
       });
-      count.textContent = (at + 1) + ' / ' + t.gallery.length;
+      count.textContent = (at + 1) + ' / ' + shots.length;
     }
     function open(i, from){
       at = i; trigger = from || null;
@@ -313,7 +476,7 @@
       setTimeout(function(){ box.hidden = true; stage.innerHTML = ''; }, 260);
       if(trigger && trigger.focus) trigger.focus();
     }
-    function go(d){ at = (at + d + t.gallery.length) % t.gallery.length; render(); }
+    function go(d){ at = (at + d + shots.length) % shots.length; render(); }
     function onKey(e){
       if(e.key === 'Escape') close();
       else if(e.key === 'ArrowRight') go(1);
