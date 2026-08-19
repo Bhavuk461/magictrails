@@ -15,6 +15,7 @@ import re
 import sys
 import unicodedata
 
+import numpy as np
 from PIL import Image, ImageOps
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -43,6 +44,40 @@ ROOT_IMAGES = ["hero.webp"]
 FULLBLEED_STEMS = {"back", "title", "hero"}
 
 
+def autocrop_letterbox(im):
+    """Strip black letterbox bars from phone screenshots.
+
+    Some sources are screen recordings/screenshots with hard black bars and,
+    at the bottom, a bright home-indicator sitting inside the bar. A naive
+    scan stops at that indicator, so a bar only ends where sustained image
+    content begins. Photos without bars are returned untouched.
+    """
+    a = np.asarray(im.convert("RGB")).astype(float)
+
+    def content_start(flags, min_run):
+        run = min(min_run, len(flags))
+        for i in range(len(flags)):
+            if not flags[i] and (~flags[i:i + run]).sum() >= run * 0.9:
+                return i
+        return 0
+
+    def bounds(means):
+        dark = means < 24
+        run = max(8, int(len(means) * 0.02))
+        lo = content_start(dark, run)
+        hi = len(means) - 1 - content_start(dark[::-1], run)
+        return lo, hi
+
+    top, bottom = bounds(a.mean(axis=(1, 2)))      # horizontal bars
+    left, right = bounds(a.mean(axis=(0, 2)))      # vertical bars (pillarbox)
+
+    w, h = im.size
+    if (top, left) == (0, 0) and (bottom, right) == (h - 1, w - 1):
+        return im, 0
+    trimmed = top + (h - 1 - bottom) + left + (w - 1 - right)
+    return im.crop((left, top, right + 1, bottom + 1)), trimmed
+
+
 def slugify(name):
     """'Buran ghati' -> 'buran-ghati'. Keeps output paths URL-safe."""
     norm = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
@@ -68,6 +103,7 @@ def build_one(src, out_dir, force=False):
         im = ImageOps.exif_transpose(im)  # honour phone orientation tags
         if im.mode not in ("RGB", "RGBA"):
             im = im.convert("RGB")
+        im, trimmed = autocrop_letterbox(im)
         src_w, src_h = im.size
         ratio = src_h / src_w
 
@@ -91,6 +127,9 @@ def build_one(src, out_dir, force=False):
             made.append(src_w)
             if not os.path.exists(out_path) or force:
                 im.save(out_path, "WEBP", quality=quality, method=METHOD)
+
+    if trimmed:
+        print("      (cropped %dpx of letterbox)" % trimmed)
 
     return {
         "w": src_w,
