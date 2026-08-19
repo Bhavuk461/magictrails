@@ -1,20 +1,30 @@
 # Deploys the static MagicTrails site to GitLab Pages.
-# All site files live at the repo root, so we copy them (and the trek
-# image folders) into the `public/` directory that Pages serves.
+# All site files live at the repo root, so they are copied into the `public/`
+# directory that Pages serves.
+#
+# This used to name each file explicitly, which silently dropped anything new
+# (hero.webp was never deployed, and the generated img/ derivatives plus
+# img.js / img-manifest.js would have 404'd). It now copies everything and
+# subtracts what should not ship, so new assets deploy without editing this file.
 
 pages:
   stage: deploy
   image: alpine:latest
   script:
     - mkdir -p public
-    # copy everything except build/VCS metadata into public/
     - >
-      cp -r
-      index.html trek.html
-      styles.css trek.css
-      data.js main.js trek.js
-      "Buran ghati" "Chandrashila Tungnath" "Kuari pass trek" "Roopkund trek"
-      public/
+      find . -mindepth 1 -maxdepth 1
+      ! -name public
+      ! -name .git
+      ! -name .gitlab-ci.yml
+      ! -name .claude
+      ! -name tools
+      ! -name README.md
+      -exec cp -r {} public/ \;
+    # The .mp4 sources are not referenced by any page and would add ~96 MB
+    # to the artifact.
+    - find public -name '*.mp4' -delete
+    - du -sh public
   artifacts:
     paths:
       - public
