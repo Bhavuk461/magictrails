@@ -287,14 +287,16 @@
   }
 
   /* ---------- ambience ----------
-     verdant grows leaf vines down both margins as you scroll; nocturne
-     drifts a starfield behind the page. Both are decorative, both are
-     silenced by prefers-reduced-motion, and neither is built on mobile
-     where the margins are too narrow (vines) to read. */
+     verdant grows leaf vines down both margins as you scroll, bloom opens
+     Brahma Kamal the same way, and nocturne drifts a starfield behind the
+     page. All are decorative, all are silenced by prefers-reduced-motion,
+     and the margin-hugging ones drop to a single column on narrow screens
+     where two would sit under the text. */
 
   var REDUCED = window.matchMedia('(prefers-reduced-motion:reduce)');
 
   if(theme === 'verdant') buildVines();
+  if(theme === 'bloom') buildBlooms();
   if(theme === 'nocturne') buildStars();
 
   /* --- verdant --- */
@@ -390,6 +392,134 @@
     }, { passive: true });
 
     /* Images landing changes the page height, so redraw once they settle. */
+    window.addEventListener('load', function(){ rebuild(); onScroll(); });
+  }
+
+  /* --- bloom (Roopkund) --- */
+  function buildBlooms(){
+    var layer = document.createElement('div');
+    layer.className = 'blooms';
+    layer.setAttribute('aria-hidden', 'true');
+    root.appendChild(layer);
+
+    var lastH = 0;
+
+    /* Seeded, so a given page always grows the same garden. */
+    var seed = 90210;
+    function rnd(){
+      seed = (seed * 16807) % 2147483647;
+      return (seed - 1) / 2147483646;
+    }
+
+    var PETAL = 'M0,0 C -6.5,-9 -6.5,-22 0,-31 C 6.5,-22 6.5,-9 0,0 Z';
+    var LEAF  = 'M0,0 C6,-8 18,-10 25,0 C18,10 6,8 0,0 Z';
+
+    /* One plant: a stem that draws, two leaves, then a head of layered
+       bracts. Brahma Kamal has an outer ring of pale bracts round a paler
+       inner cup, which is what the two rings here stand for. */
+    function plant(x, y, at, scale, flip){
+      var outer = 6, inner = 4;
+      var g = [];
+
+      /* stem, curving back on itself the way a loaded stalk does */
+      var lean = (flip ? -1 : 1) * (5 + rnd() * 7);
+      var len = 74 + rnd() * 26;
+      g.push('<path class="bloom-stem" pathLength="1" style="--at:' + at.toFixed(4) + '" ' +
+             'd="M0,0 C ' + (-lean) + ',' + (-len * 0.38) + ' ' +
+             (lean * 1.4) + ',' + (-len * 0.68) + ' ' + (lean * 0.4) + ',' + (-len) + '"/>');
+
+      /* two leaves off the lower stem */
+      g.push('<g transform="translate(' + (-lean * 0.35) + ',' + (-len * 0.34) + ') rotate(' +
+             (flip ? 205 : -25) + ')"><path class="bloom-leaf" style="--at:' +
+             (at + 0.012).toFixed(4) + '" d="' + LEAF + '"/></g>');
+      g.push('<g transform="translate(' + (lean * 0.5) + ',' + (-len * 0.6) + ') rotate(' +
+             (flip ? -20 : 200) + ')"><path class="bloom-leaf" style="--at:' +
+             (at + 0.022).toFixed(4) + '" d="' + LEAF + '"/></g>');
+
+      /* head */
+      var head = [];
+      var i, ang;
+      for(i = 0; i < outer; i++){
+        ang = (360 / outer) * i + rnd() * 5;
+        head.push('<g transform="rotate(' + ang.toFixed(1) + ')">' +
+          '<path class="bloom-petal" style="--at:' + at.toFixed(4) +
+          ';--d:' + (0.03 + i * 0.006).toFixed(4) + '" d="' + PETAL + '"/></g>');
+      }
+      for(i = 0; i < inner; i++){
+        ang = (360 / inner) * i + 26;
+        head.push('<g transform="rotate(' + ang.toFixed(1) + ') scale(.62)">' +
+          '<path class="bloom-petal is-inner" style="--at:' + at.toFixed(4) +
+          ';--d:' + (0.055 + i * 0.005).toFixed(4) + '" d="' + PETAL + '"/></g>');
+      }
+      head.push('<circle class="bloom-core" style="--at:' + at.toFixed(4) + '" r="4.6"/>');
+
+      g.push('<g transform="translate(' + (lean * 0.4) + ',' + (-len) + ')">' +
+             head.join('') + '</g>');
+
+      return '<g class="bloom-plant" transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) +
+             ') scale(' + scale.toFixed(3) + ')" ' +
+             'style="--sway:' + (7.5 + rnd() * 4).toFixed(1) + 's;--sway-delay:-' +
+             (rnd() * 6).toFixed(1) + 's">' + g.join('') + '</g>';
+    }
+
+    function garden(height, side){
+      var W = 124;
+      var flip = side === 'right';
+      var baseX = flip ? W - 40 : 40;
+      /* Spacing keeps the element count sane: every petal restyles when
+         --grow changes, so a handful of larger plants rather than a dense
+         border of small ones. */
+      var gap = 700;
+      var n = Math.max(3, Math.round(height / gap));
+      var parts = [];
+
+      for(var i = 0; i < n; i++){
+        var y = (i + 0.55) * (height / n);
+        var x = baseX + (rnd() - 0.5) * 34;
+        /* Compress into the first 80% of the scroll so even the lowest
+           plants finish drawing their stem and opening by the page end. */
+        var at = Math.min(0.8, (y / height) * 0.8);
+        parts.push(plant(x, y, at, 0.9 + rnd() * 0.55, flip));
+      }
+
+      return '<svg class="b-' + side + '" width="' + W + '" height="' + height + '" ' +
+               'viewBox="0 0 ' + W + ' ' + height + '" fill="none" aria-hidden="true">' +
+               parts.join('') +
+             '</svg>';
+    }
+
+    function rebuild(){
+      var h = root.offsetHeight;
+      if(!h || Math.abs(h - lastH) < 40) return;
+      lastH = h;
+      seed = 90210;                       /* same garden after a resize */
+      layer.innerHTML = garden(h, 'left') + garden(h, 'right');
+    }
+
+    var lastRun = 0;
+    function onScroll(){
+      var now = (window.performance || Date).now();
+      if(now - lastRun < 16) return;
+      lastRun = now;
+      var r = root.getBoundingClientRect();
+      var span = r.height - window.innerHeight;
+      var p = span > 0 ? (-r.top) / span : 1;
+      layer.style.setProperty('--grow', Math.max(0, Math.min(1, p * 1.04 + 0.05)).toFixed(4));
+    }
+
+    rebuild();
+    if(REDUCED.matches){
+      layer.style.setProperty('--grow', '1');
+    } else {
+      onScroll();
+      window.addEventListener('scroll', onScroll, { passive: true });
+    }
+
+    var rt;
+    window.addEventListener('resize', function(){
+      clearTimeout(rt);
+      rt = setTimeout(function(){ rebuild(); onScroll(); }, 180);
+    }, { passive: true });
     window.addEventListener('load', function(){ rebuild(); onScroll(); });
   }
 
