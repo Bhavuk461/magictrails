@@ -849,13 +849,13 @@
 
   /* Plants are grouped into vertical bands and only the bands near the
      viewport have their --grow updated. Without this, every plant on the page
-     restyles on every scroll frame: measured at 17.8ms median and 69.7ms peak
-     on a 24-core desktop, i.e. already past the 60fps budget before a phone
-     ever sees it. Banding keeps the per-frame set to what is actually on
-     screen. */
-  /* Band height. The live window is a fixed span of page, so shorter bands
-     track it more closely: the same window then covers fewer parked plants,
-     and a plant only costs a frame if it is genuinely near the viewport. */
+     restyles on every scroll frame: measured at 30.2ms per frame on a desktop,
+     i.e. well past the 60fps budget before a phone ever sees it. Banding cuts
+     that to 7.4ms by keeping the per-frame set to what is actually on screen.
+
+     The live window is a fixed span of page, so shorter bands track it more
+     closely: the same window then covers fewer parked plants, and a plant only
+     costs a frame if it is genuinely near the viewport. */
   var BAND = 450;
 
   function bandWrap(items, height, bandPx){
