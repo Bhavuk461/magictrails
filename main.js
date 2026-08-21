@@ -399,7 +399,7 @@
   /* ========== PARALLAX + SCROLL PROGRESS ========== */
   var parallax = Array.prototype.slice.call(document.querySelectorAll('.parallax'));
   var progress = document.querySelector('.scroll-progress');
-  var ticking = false;
+  var lastPct = -1;
 
   /* Multi-megabyte layers being transformed every frame is the main source of
      scroll jank on phones, and reduced-motion should silence it everywhere. */
@@ -409,56 +409,82 @@
     parallax.forEach(function(el){ el.style.transform = ''; });
   }
 
-  function onScroll(){
-    if(ticking) return; ticking = true;
-    requestAnimationFrame(function(){
-      var y = window.pageYOffset;
-
-      if(!parallaxOff()){
-        var vh = window.innerHeight;
-        /* Read every rect first, then write — interleaving the two forced a
-           layout recalculation per element per frame. */
-        var reads = [];
-        for(var i = 0; i < parallax.length; i++){
-          var el = parallax[i];
-          var r = el.parentElement.getBoundingClientRect();
-          if(r.bottom < -200 || r.top > vh + 200) continue;
-          reads.push([el, r.top, parseFloat(el.dataset.speed) || 0.2]);
-        }
-        for(var j = 0; j < reads.length; j++){
-          reads[j][0].style.transform =
-            'translate3d(0,' + (reads[j][1] * -reads[j][2]) + 'px,0) scale(1.12)';
-        }
+  /* Runs inside the shared rAF (see MT.onScroll), so no self-throttling. */
+  function onScroll(y){
+    if(!parallaxOff() && parallax.length){
+      var vh = window.innerHeight;
+      /* Read every rect first, then write — interleaving the two forced a
+         layout recalculation per element per frame. */
+      var reads = [];
+      for(var i = 0; i < parallax.length; i++){
+        var el = parallax[i];
+        var r = el.parentElement.getBoundingClientRect();
+        if(r.bottom < -200 || r.top > vh + 200) continue;
+        reads.push([el, r.top, parseFloat(el.dataset.speed) || 0.2]);
       }
+      for(var j = 0; j < reads.length; j++){
+        reads[j][0].style.transform =
+          'translate3d(0,' + (reads[j][1] * -reads[j][2]) + 'px,0) scale(1.12)';
+      }
+    }
 
-      if(progress){ var h = document.documentElement.scrollHeight - window.innerHeight; progress.style.width = (h>0 ? (y/h*100) : 0)+'%'; }
-      ticking = false;
-    });
+    if(progress){
+      /* Rounded to whole percent: the bar is 100vw wide, so sub-pixel widths
+         are invisible but still cost a layout + paint on every frame. */
+      var pct = docSpan > 0 ? Math.round(y / docSpan * 100) : 0;
+      if(pct !== lastPct){ progress.style.width = pct + '%'; lastPct = pct; }
+    }
   }
-  window.addEventListener('scroll', onScroll, {passive:true});
-  window.addEventListener('resize', onScroll, {passive:true});
-  onMQ(MOBILE_Q, function(){ clearParallax(); onScroll(); });
-  onMQ(REDUCED_Q, function(){ clearParallax(); onScroll(); });
+
+  /* scrollHeight is a layout read. Taken here it would run after another
+     subscriber has already written to the DOM this frame, which forces the
+     whole style-and-layout pipeline a second time — so it is measured when
+     the page actually changes size instead. */
+  var docSpan = 0, sliderTop = 0, sliderBot = 0;
+  var slider = document.querySelector('.cine-slider');
+
+  function measurePage(){
+    docSpan = document.documentElement.scrollHeight - window.innerHeight;
+    if(slider){
+      /* Page-space bounds, so the header check below needs no rect of its own.
+         Reading one during the frame would land after the parallax has written
+         its transforms, which forces a second layout pass every frame. */
+      var r = slider.getBoundingClientRect();
+      sliderTop = r.top + window.pageYOffset;
+      sliderBot = r.bottom + window.pageYOffset;
+    }
+  }
+  measurePage();
+  window.addEventListener('load', function(){ measurePage(); MT.kick(); });
+  if(window.ResizeObserver){
+    /* Images landing and breakpoints crossing both change the page's height. */
+    new ResizeObserver(function(){ measurePage(); MT.kick(); }).observe(document.body);
+  } else {
+    window.addEventListener('resize', measurePage, { passive: true });
+  }
+
+  MT.onScroll(onScroll);
+  onMQ(MOBILE_Q, function(){ clearParallax(); MT.kick(); });
+  onMQ(REDUCED_Q, function(){ clearParallax(); MT.kick(); });
   if(parallaxOff()) clearParallax();
-  onScroll();
 
   /* ========== STICKY HEADER + SLIDER-AWARE DARK MODE ========== */
   var header = document.querySelector('.site-header');
-  var slider = document.querySelector('.cine-slider');
   if(header){
-    function updateHeader(){
-      header.classList.toggle('scrolled', window.pageYOffset > 40);
+    var wasScrolled = null, wasOver = null;
+    function updateHeader(y){
+      /* classList.toggle writes unconditionally, which invalidates style for
+         the header's subtree on every frame of every scroll. Both flags change
+         at most a handful of times per page, so only write on a real change. */
+      var scrolled = y > 40;
+      if(scrolled !== wasScrolled){ header.classList.toggle('scrolled', scrolled); wasScrolled = scrolled; }
+
       /* The dark treatment only makes sense over the fullscreen desktop slider. */
-      if(slider && !isMobile()){
-        var sr = slider.getBoundingClientRect();
-        header.classList.toggle('over-slider', sr.top < 60 && sr.bottom > 60);
-      } else {
-        header.classList.remove('over-slider');
-      }
+      var over = !!slider && !isMobile() && (sliderTop - y) < 60 && (sliderBot - y) > 60;
+      if(over !== wasOver){ header.classList.toggle('over-slider', over); wasOver = over; }
     }
-    window.addEventListener('scroll', updateHeader, {passive:true});
-    onMQ(MOBILE_Q, updateHeader);
-    updateHeader();
+    MT.onScroll(updateHeader);
+    onMQ(MOBILE_Q, MT.kick);
   }
 
   /* ========== MAGNETIC BUTTONS (desktop only) ========== */

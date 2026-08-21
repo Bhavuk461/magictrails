@@ -599,6 +599,8 @@ html[data-theme="nocturne"] .band{background:var(--bg-2)}
 .vines svg{position:absolute;top:0;height:100%;overflow:visible}
 .vines .v-left{left:0}
 .vines .v-right{right:0}
+/* The stem spans the whole page, so it cannot live inside a scroll band with
+   the leaves: it tracks page progress on its own property instead. */
 .vine-stem{
   fill:none;
   stroke:var(--vine,#5d7a4a);
@@ -606,7 +608,7 @@ html[data-theme="nocturne"] .band{background:var(--bg-2)}
   stroke-linecap:round;
   opacity:.5;
   stroke-dasharray:1;
-  stroke-dashoffset:calc(1 - var(--grow))}
+  stroke-dashoffset:calc(1 - var(--stem,0))}
 /* A leaf is a group: a filled blade plus a stroked midrib and side veins.
    The group carries the animation, so the extra botanical detail costs
    nothing extra when --grow changes. */
@@ -671,8 +673,20 @@ html[data-theme="nocturne"] #trek-root > *{position:relative;z-index:1}
 /* The grain would dull the stars. */
 html[data-theme="nocturne"] body::after{z-index:0}
 
+/* The lighter build twinkles in three groups rather than star by star, so the
+   compositor keeps three layers instead of thirty. */
+.sky__group{
+  position:absolute;inset:0;
+  animation:mtBreathe var(--dur,6s) ease-in-out var(--delay,0s) infinite}
+html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
+@keyframes mtBreathe{
+  0%,100%{opacity:.42}
+  50%    {opacity:1}
+}
+
 @media(prefers-reduced-motion:reduce){
   .sky__star{animation:none;opacity:var(--max,.7)}
+  .sky__group{animation:none}
   .sky__shoot{display:none}
   .vine-stem{stroke-dashoffset:0}
   .vine-leaf{opacity:.85;transform:none}
@@ -780,3 +794,309 @@ html[data-theme="nocturne"] body::after{z-index:0}
   .bloom-petal,.bloom-core,.bloom-leaf{opacity:.9;transform:none}
   .bloom-open{opacity:.85;transform:none}
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COVERFLOW — Chopta Tungnath
+   A deck of square prints on the journal's paper ground, raked back on both
+   sides. Square because these photographs are a mix of portrait and landscape
+   and one crop lets them share a deck without the rhythm breaking.
+
+   Every measurement here derives from --cover-card, so the rake scales with
+   the viewport and the script measures exactly one thing: the card's width.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cover{
+  --cover-card:clamp(172px,25vw,320px);
+  --mat:clamp(7px,.9vw,13px);
+  --pad-y:clamp(22px,3.6vw,44px);
+  --deck-h:calc(var(--cover-card) + var(--mat) * 2 + 2px);
+  position:relative}
+
+/* The deck runs wider than the text column, and clips at its own padded box
+   so the prints' shadows still have room to fall. */
+.gallery--cover .cover__frame{margin-inline:calc(var(--gutter) * -1)}
+.cover__frame{
+  overflow:hidden;
+  padding:var(--pad-y) 0;
+  perspective:calc(var(--cover-card) * 3);
+  cursor:grab;
+  /* Horizontal drag is ours; the page keeps vertical scrolling. */
+  touch-action:pan-y;
+  -webkit-tap-highlight-color:transparent}
+.cover__frame:active{cursor:grabbing}
+
+.cover__deck{position:relative;height:var(--deck-h);transform-style:preserve-3d}
+/* A standing will-change is a standing compositor layer per print. Asked for
+   only while the deck is actually moving. */
+.cover__deck.is-moving .cover__card{will-change:transform,opacity}
+
+.cover__card{
+  position:absolute;left:50%;top:0;
+  display:block;width:var(--cover-card);
+  margin:0;padding:var(--mat);
+  font:inherit;color:inherit;text-align:left;
+  background:var(--surface);
+  border:1px solid var(--line);
+  box-shadow:var(--shadow-sm);
+  cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+  backface-visibility:hidden;
+  transition:box-shadow .55s var(--ease)}
+.cover__card.is-sel{box-shadow:var(--shadow-lg);cursor:zoom-in}
+.cover__card:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+
+.cover__print{display:block;position:relative;overflow:hidden}
+.cover__print img{
+  display:block;width:100%;aspect-ratio:1/1;object-fit:cover;
+  /* the same hairline the mat frame puts against its photograph */
+  outline:1px solid var(--line);outline-offset:-1px}
+
+.cover__arrow{
+  position:absolute;top:calc(var(--pad-y) + var(--deck-h) / 2);z-index:110;
+  width:44px;height:44px;padding:0;border-radius:50%;
+  -webkit-appearance:none;appearance:none;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--surface);border:1px solid var(--line);
+  box-shadow:var(--shadow-sm);cursor:pointer;
+  transform:translateY(-50%);
+  transition:background .3s,border-color .3s}
+.cover__arrow::before{
+  content:'';width:9px;height:9px;
+  border-left:1.5px solid var(--ink-soft);
+  border-bottom:1.5px solid var(--ink-soft)}
+.cover__arrow--prev{left:-6px}
+.cover__arrow--prev::before{transform:rotate(45deg) translate(1px,-1px)}
+.cover__arrow--next{right:-6px}
+.cover__arrow--next::before{transform:rotate(-135deg) translate(1px,-1px)}
+.cover__arrow:hover{background:var(--bg-2);border-color:var(--accent)}
+.cover__arrow:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* Fixed height: the caption is the one thing that must not shift the dots
+   as you push through photographs with names of different lengths. */
+.cover__cap{
+  margin-top:clamp(14px,2vw,22px);text-align:center;
+  min-height:5.6em}
+.cover__n{
+  font-size:.62rem;letter-spacing:.24em;color:var(--muted);
+  font-variant-numeric:tabular-nums}
+.cover__title{
+  font-family:'Fraunces',serif;font-weight:600;
+  font-size:clamp(1.05rem,2vw,1.5rem);line-height:1.2;letter-spacing:-.012em;
+  color:var(--ink);margin-top:9px}
+.cover__sub{
+  font-size:.86rem;line-height:1.55;color:var(--ink-soft);
+  margin:6px auto 0;max-width:44ch}
+.cover__cap.is-fresh > *{animation:mtCapIn .5s var(--ease) both}
+.cover__cap.is-fresh .cover__title{animation-delay:.05s}
+.cover__cap.is-fresh .cover__sub{animation-delay:.1s}
+@keyframes mtCapIn{
+  from{opacity:0;transform:translateY(7px)}
+  to  {opacity:1;transform:none}
+}
+
+.cover__dots{display:flex;justify-content:center;gap:2px;margin-top:clamp(10px,1.4vw,16px)}
+.cover__dot{
+  position:relative;width:24px;height:24px;padding:0;
+  border:0;background:none;cursor:pointer;
+  -webkit-appearance:none;appearance:none}
+.cover__dot::before{
+  content:'';position:absolute;left:50%;top:50%;
+  width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;
+  background:var(--ink);opacity:.22;
+  transition:opacity .3s,background .3s,transform .35s var(--ease)}
+.cover__dot[aria-current]::before{opacity:1;background:var(--accent);transform:scale(1.3)}
+.cover__dot:focus-visible{outline:2px solid var(--accent);outline-offset:0;border-radius:50%}
+
+@media(max-width:620px){
+  .cover__arrow{display:none}
+  .cover__cap{min-height:6.4em}
+}
+@media(prefers-reduced-motion:reduce){
+  .cover__card{transition:none}
+  .cover__cap.is-fresh > *{animation:none}
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FILMSTRIP — Kuari Pass
+   Full bleed. Every frame shares one top edge and one height; the unfocused
+   ones are clipped to half, so the strip reads as a row of cropped frames
+   with one complete photograph standing in the middle of it.
+
+   Clipping rather than resizing is deliberate: the row is laid out once and
+   never again, so moving focus is pure compositing, and the photograph does
+   not rescale as it opens — it is unveiled rather than swapped.
+
+   The backdrop is the focused photograph itself, blurred and re-graded to
+   that frame's own hue, which is what makes the whole stage swing colour as
+   you move along the strip.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.strip{
+  --stage-h:clamp(430px,72svh,700px);
+  /* A ratio of the stage, so the strip keeps its proportions at any size —
+     but floored and capped, because a frame this small stops reading as a
+     photograph and one this large stops leaving room for the headline. */
+  --card-h:clamp(170px,calc(var(--stage-h) * .38),260px);
+  --card-w:calc(var(--card-h) * .75);
+  --strip-pad:clamp(20px,5vw,72px);
+  position:relative;margin-bottom:clamp(64px,9vw,120px)}
+.strip__intro{
+  max-width:var(--wrap);margin:0 auto clamp(20px,3vw,34px);
+  padding:0 var(--gutter)}
+
+.strip__stage{
+  position:relative;height:var(--stage-h);overflow:hidden;
+  background:#05070e;color:#fff;
+  /* Keeps the blend layers reaching no further than the stage. */
+  isolation:isolate;
+  cursor:grab;touch-action:pan-y;
+  user-select:none;-webkit-user-select:none}
+.strip__stage:active{cursor:grabbing}
+
+.strip__bg{position:absolute;inset:0;z-index:0}
+/* Inset past the edges so the blur has nothing to feather against. */
+.strip__plate{
+  position:absolute;inset:-7%;
+  background-size:cover;background-position:center;
+  filter:blur(24px) saturate(1.06);
+  transform:scale(1.06);opacity:0;
+  transition:opacity .62s var(--ease),transform 1.8s var(--ease)}
+.strip__plate.is-on{opacity:1;transform:scale(1)}
+/* Keeps the photograph's light and takes the frame's hue. */
+.strip__hue{
+  position:absolute;inset:0;background-color:#8a8a8a;
+  mix-blend-mode:color;
+  transition:background-color .62s var(--ease)}
+.strip__wash{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg,
+    rgba(4,6,12,.66) 0%, rgba(4,6,12,.12) 32%,
+    rgba(4,6,12,.30) 60%, rgba(4,6,12,.82) 100%)}
+.strip__grain{
+  position:absolute;inset:0;
+  background-image:var(--grain);background-size:170px 170px;
+  opacity:.2;mix-blend-mode:overlay}
+
+/* Headline block, sitting on the strip's shared top edge. */
+.strip__copy{
+  position:absolute;inset:0 0 auto 0;height:50%;z-index:2;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  padding:0 var(--strip-pad) clamp(16px,2.6vh,30px);
+  pointer-events:none}
+.strip__title{
+  font-family:'Fraunces',serif;font-weight:600;
+  font-size:clamp(2rem,5.2vw,4rem);line-height:.94;letter-spacing:-.03em;
+  color:#fff;text-shadow:0 2px 34px rgba(0,0,0,.34)}
+.strip__title .l{display:block;overflow:hidden}
+.strip__title .l i{
+  display:block;font-style:normal;
+  animation:mtLineUp .66s var(--ease) var(--d,0ms) both}
+@keyframes mtLineUp{
+  from{transform:translateY(110%)}
+  to  {transform:none}
+}
+.strip__note{
+  margin-top:14px;font-size:.64rem;letter-spacing:.24em;text-transform:uppercase;
+  color:rgba(255,255,255,.7)}
+.strip__meta{
+  position:absolute;right:var(--strip-pad);bottom:clamp(16px,2.6vh,30px);
+  display:flex;gap:clamp(14px,3vw,42px);
+  list-style:none;margin:0;padding:0}
+.strip__meta li{
+  font-size:.62rem;letter-spacing:.22em;white-space:nowrap;
+  color:rgba(255,255,255,.72);
+  animation:mtFactIn .5s var(--ease) var(--d,0ms) both}
+@keyframes mtFactIn{
+  from{opacity:0;transform:translateY(7px)}
+  to  {opacity:1;transform:none}
+}
+
+.strip__rail{position:absolute;inset:50% 0 auto 0;height:var(--card-h);z-index:3}
+.strip__track{
+  display:flex;align-items:flex-start;height:100%;
+  gap:clamp(5px,.7vw,11px);
+  will-change:transform;
+  transition:transform .72s var(--ease)}
+/* Dragging writes the transform every move; a transition would fight it. */
+.strip__track.is-still{transition:none}
+
+.strip__card{
+  position:relative;flex:0 0 auto;
+  width:var(--card-w);height:100%;
+  padding:0;border:0;background:rgba(255,255,255,.06);
+  -webkit-appearance:none;appearance:none;
+  overflow:hidden;cursor:pointer;
+  -webkit-clip-path:inset(0 0 50% 0);clip-path:inset(0 0 50% 0);
+  transition:-webkit-clip-path .62s var(--ease),clip-path .62s var(--ease)}
+.strip__card.is-on{-webkit-clip-path:inset(0 0 0 0);clip-path:inset(0 0 0 0);cursor:zoom-in}
+.strip__card img{
+  display:block;width:100%;height:100%;object-fit:cover;
+  /* Anchored above centre, so a clipped frame still shows its subject. */
+  object-position:50% 34%}
+.strip__dim{
+  position:absolute;inset:0;background:#05070e;opacity:.24;
+  transition:opacity .62s var(--ease)}
+.strip__card.is-on .strip__dim{opacity:0}
+.strip__card:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+
+.strip__rule{
+  position:absolute;left:var(--strip-pad);bottom:clamp(14px,2.2vh,26px);z-index:4;
+  width:min(220px,34vw);
+  display:grid;grid-template-columns:1fr 1fr;
+  font-size:.62rem;letter-spacing:.2em;color:rgba(255,255,255,.75);
+  font-variant-numeric:tabular-nums}
+.strip__of{text-align:right}
+.strip__bar{
+  grid-column:1 / -1;position:relative;height:1px;margin-top:9px;
+  background:rgba(255,255,255,.26)}
+.strip__bar i{
+  position:absolute;top:0;bottom:0;left:0;background:#fff;
+  transition:transform .72s var(--ease)}
+
+@media(max-width:700px){
+  .strip{
+    --stage-h:clamp(390px,64svh,560px);
+    --card-h:clamp(138px,calc(var(--stage-h) * .36),196px)}
+  .strip__note{margin-top:10px}
+  /* Three facts and a headline will not share a phone's width. */
+  .strip__meta{display:none}
+  .strip__rule{width:min(180px,46vw)}
+}
+@media(prefers-reduced-motion:reduce){
+  .strip__track,.strip__card,.strip__dim,.strip__bar i,
+  .strip__plate,.strip__hue{transition:none}
+  .strip__title .l i,.strip__meta li{animation:none}
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE LIGHTER BUILD
+   Same design, less to pay for it. Everything switched off below is one of
+   the three things that actually cost a weak device frames: a full-viewport
+   blend that has to recompute as the page scrolls under it, an SVG filter, or
+   an animation that never stops running. Scoped to this stylesheet, so the
+   homepage keeps its own treatment.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* A fixed, multiplying grain layer re-blends the whole viewport on every
+   scroll frame. Flattened to a plain overlay: on paper the difference is
+   almost invisible, and it costs nothing. */
+html.is-lite body::after{mix-blend-mode:normal;opacity:.07}
+/* A blurred backdrop behind a fixed header is recomputed as the page moves. */
+html.is-lite .site-header{backdrop-filter:none;background:rgba(251,246,236,.96)}
+html.is-lite[data-theme="nocturne"] .site-header{background:rgba(11,16,32,.95)}
+html.is-lite .lightbox__ui button{backdrop-filter:none;background:rgba(24,19,12,.8)}
+/* feTurbulence + feDisplacementMap, re-rasterised on every resize. */
+html.is-lite .frame-deckle .shot__btn::before{filter:none;box-shadow:var(--shadow-sm)}
+html.is-lite .bloom-sway{animation:none}
+html.is-lite .strip__grain{display:none}
+html.is-lite .strip__hue{mix-blend-mode:normal;opacity:.42}
+html.is-lite .strip__plate,
+html.is-lite .strip__plate.is-on{
+  filter:blur(15px);transform:scale(1.05);
+  transition:opacity .42s var(--ease)}
+/* A strip that fits its stage does not slide, so it should not offer to. */
+.strip__stage.is-static,
+.strip__stage.is-static:active{cursor:default}

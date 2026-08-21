@@ -5,16 +5,26 @@
 //   bloom    - the same green ground, but Brahma Kamal open as you scroll
 //   nocturne - night sky with a drifting starfield
 //
-// Each gallery entry carries a `frame`, chosen for that specific photograph:
+// `galleryStyle` picks how the photographs are presented:
+//   frames    (default) a lead plate and a grid, each photo in its own frame
+//   coverflow a 3D deck you push through, one print at a time
+//   filmstrip a full-bleed cinematic strip that re-grades the backdrop
+//
+// In the `frames` style each entry carries a `frame`, chosen for that
+// specific photograph:
 //   mat      museum matting + inner hairline - formal, lets a strong frame breathe
 //   arch     arched top - architectural, sacred, or a sky-opening composition
 //   vignette soft feathered edge - mist, snowfall, haze
 //   deckle   torn deckle-edge paper - handmade, botanical, textural subjects
 //   film     35mm strip with sprockets - candid, first-person, documentary
+// `coverflow` uses `title`/`sub` for the caption under the deck; `filmstrip`
+// uses `title` (a newline breaks the headline), `meta`, and `accent` — the
+// hue the whole backdrop grades to while that frame holds focus.
 window.TREKS = [
   {
     slug: 'chopta-tungnath',
     theme: 'journal',
+    galleryStyle: 'coverflow',
     name: 'Chopta Tungnath',
     folder: 'Chandrashila Tungnath',
     price: '₹4,999',
@@ -25,12 +35,17 @@ window.TREKS = [
     tagline: 'The world\'s highest Shiva temple, wrapped in meadow and mist.',
     gallery: [
       // the Tungnath shrine, prayer flags and cairns against the snow range
-      { src: 'Screenshot 2026-06-14 230258.webp', frame: 'arch' },
-      { src: 'Screenshot 2026-06-14 230502.webp', frame: 'mat' },
+      { src: 'Screenshot 2026-06-14 230258.webp', frame: 'arch',
+        title: 'The shrine on top', sub: 'Stone, ash and prayer flags, with the range behind' },
+      { src: 'Screenshot 2026-06-14 230502.webp', frame: 'mat',
+        title: 'Offerings on the ridge', sub: 'Ribbons tied against the wall of white' },
       // a bird riding the thermals over hazy forested ridges
-      { src: 'Screenshot_20260614_230825_Photos.jpg.webp', frame: 'vignette' },
-      { src: 'Screenshot_20260614_231354_Photos.jpg.webp', frame: 'deckle' },
-      { src: 'Screenshot_20260614_231800_Photos.jpg.webp', frame: 'film' }
+      { src: 'Screenshot_20260614_230825_Photos.jpg.webp', frame: 'vignette',
+        title: 'Riding the thermals', sub: 'Ridge after ridge, falling away into haze' },
+      { src: 'Screenshot_20260614_231354_Photos.jpg.webp', frame: 'deckle',
+        title: 'Cairns in the cloud', sub: 'Chandrashila once the light has gone' },
+      { src: 'Screenshot_20260614_231800_Photos.jpg.webp', frame: 'film',
+        title: 'The village wakes', sub: 'Slate and tin roofs under the snow line' }
     ],
     intro: 'If the Himalaya has a gentle door, this is it. Chopta is a rolling carpet of emerald meadow stitched with rhododendron, and above it floats Tungnath \u2014 the highest temple to Shiva on earth. A short, soulful climb to Chandrashila rewards you with a 360\u00b0 amphitheatre of giants: Nanda Devi, Trishul, Chaukhamba, all standing to attention at dawn.',
     sections: [
@@ -92,6 +107,7 @@ window.TREKS = [
   {
     slug: 'kuari-pass',
     theme: 'nocturne',
+    galleryStyle: 'filmstrip',
     name: 'Kuari Pass',
     folder: 'Kuari pass trek',
     price: '₹7,500',
@@ -101,11 +117,19 @@ window.TREKS = [
     grade: 'Easy \u2013 Moderate',
     tagline: 'Lord Curzon\'s trail and the grandest balcony view of Nanda Devi.',
     gallery: [
-      { src: 'IMG_0019_Original.webp', frame: 'mat' },
+      { src: 'IMG_0019_Original.webp', frame: 'mat',
+        title: 'Last light\non the range', meta: ['ALPENGLOW', 'SNOWFIELD', 'DUSK'],
+        accent: '#c8863c' },
       // a tent taking the weather, seen through falling snow
-      { src: 'IMG_0038_Original.webp', frame: 'vignette' },
-      { src: 'IMG_0043_Original.webp', frame: 'film' },
-      { src: 'IMG_3717_Original.webp', frame: 'arch' }
+      { src: 'IMG_0038_Original.webp', frame: 'vignette',
+        title: 'The camp takes\nthe weather', meta: ['SNOWFALL', 'CAMP', 'AFTERNOON'],
+        accent: '#7d93b4' },
+      { src: 'IMG_0043_Original.webp', frame: 'film',
+        title: 'Chai, and\nthe whiteout', meta: ['KETTLE', 'WHITEOUT', 'MORNING'],
+        accent: '#b06a4e' },
+      { src: 'IMG_3717_Original.webp', frame: 'arch',
+        title: 'Tents on\nthe snowfield', meta: ['CLEAR', 'CAMP', 'EVENING'],
+        accent: '#4d6ba6' }
     ],
     intro: 'Walked and loved by Lord Curzon over a century ago, the Kuari Pass is still the connoisseur\u2019s winter trek. It threads through ancient oak and rhododendron forest, opens onto wide ridgeline campsites, and delivers a front-row, panoramic stare at Nanda Devi \u2014 the second-highest peak in India \u2014 along with Dronagiri, Kamet and Hathi-Ghoda.',
     sections: [

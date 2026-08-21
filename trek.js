@@ -60,6 +60,19 @@
   var TICK = '<svg class="tick" viewBox="0 0 16 16" aria-hidden="true" focusable="false">' +
              '<path d="M2.5 8.6 L6.2 12.2 L13.5 4"/></svg>';
 
+  var REDUCED = window.matchMedia('(prefers-reduced-motion:reduce)');
+
+  /* Low-power devices get a lighter build of the same design: fewer decorative
+     nodes, no idle animation, and the expensive paint features off (see
+     .is-lite in trek.css). The design language is preserved; only the cost is
+     cut. Declared up here because the carousels below want it too. */
+  var LITE = MT.lite;
+  if(LITE) document.documentElement.classList.add('is-lite');
+  var DENSITY = LITE ? 0.55 : 1;
+
+  function slice(list){ return Array.prototype.slice.call(list); }
+  function clamp(v, lo, hi){ return v < lo ? lo : v > hi ? hi : v; }
+
   /* ---------- hero ---------- */
   var heroImg = MT.img(t.folder + '/back.webp', {
     alt: t.name,
@@ -191,27 +204,143 @@
       rail +
     '</div>';
 
-  /* ---------- gallery ---------- */
-  var gallery = '';
-  if(shots.length){
+  /* ---------- gallery ----------
+     Three presentations, picked per trek in data.js, because the photographs
+     themselves differ: a paper deck of prints for the journal ground, a
+     cinematic strip for the night one, framed plates for the rest. They share
+     one contract — every photograph carries data-lb="<index>", which is all
+     the lightbox binds to. */
+  var galStyle = shots.length ? (t.galleryStyle || 'frames') : '';
+  var galNum   = String(t.sections.length + 3).padStart(2, '0');
+
+  function pad2(n){ return String(n).padStart(2, '0'); }
+
+  function galHead(){
+    return '<h2 class="sec-title reveal" id="gal-h">' +
+      '<span class="num">' + galNum + '</span>From the trail</h2>';
+  }
+
+  /* Label used for the button, the caption and the lightbox alike. */
+  function shotLabel(s, i){
+    return s.title ? s.title.replace(/\n/g, ' ') : (t.name + ', photo ' + (i + 1));
+  }
+
+  var gallery =
+    galStyle === 'coverflow' ? coverDeck() :
+    galStyle === 'filmstrip' ? filmStrip() :
+    galStyle                 ? framedGrid() : '';
+
+  /* --- frames: a lead plate over a two-up grid, each in its own frame --- */
+  function framedGrid(){
     var lead = shots[0];
     var rest = shots.slice(1);
     var mk = function(item, i, sizes){
       return '<figure class="shot frame-' + (item.frame || 'mat') + '" data-i="' + i + '">' +
-          '<button type="button" class="shot__btn" aria-label="Open photo ' + (i + 1) + ' of ' + shots.length + '">' +
+          '<button type="button" class="shot__btn" data-lb="' + i + '" ' +
+            'aria-label="Open photo ' + (i + 1) + ' of ' + shots.length + '">' +
             MT.img(t.folder + '/' + item.src, { alt: t.name + ', photo ' + (i + 1), sizes: sizes }) +
           '</button>' +
-          '<figcaption>' + String(i + 1).padStart(2, '0') + '</figcaption>' +
+          '<figcaption>' + pad2(i + 1) + '</figcaption>' +
         '</figure>';
     };
-    gallery =
-      '<section class="gallery" aria-labelledby="gal-h">' +
-        '<h2 class="sec-title reveal" id="gal-h"><span class="num">' +
-          String(t.sections.length + 3).padStart(2, '0') + '</span>From the trail</h2>' +
+    return '<section class="gallery" aria-labelledby="gal-h">' +
+        galHead() +
         '<div class="gallery__lead reveal">' + mk(lead, 0, '(max-width:900px) 100vw, min(1180px, 92vw)') + '</div>' +
         (rest.length ? '<div class="gallery__grid">' +
           rest.map(function(f, i){ return mk(f, i + 1, '(max-width:900px) 46vw, min(560px, 44vw)'); }).join('') +
         '</div>' : '') +
+      '</section>';
+  }
+
+  /* --- coverflow: a deck of prints, raked back on both sides ---
+     Square cards, because these photographs are a mix of portrait and
+     landscape and a square crop lets them sit in one deck without the rhythm
+     breaking. Everything else — pitch, recession, perspective — is derived in
+     wireCover() from the one card width CSS gives it, so the rake scales with
+     the viewport and nothing here is hard-coded to a breakpoint. */
+  function coverDeck(){
+    var cards = shots.map(function(s, i){
+      return '<button type="button" class="cover__card" data-i="' + i + '" data-lb="' + i + '" ' +
+          'tabindex="' + (i ? '-1' : '0') + '" aria-roledescription="slide" ' +
+          'aria-label="' + esc(shotLabel(s, i) + ' — ' + (i + 1) + ' of ' + shots.length) + '">' +
+          '<span class="cover__print">' +
+            MT.img(t.folder + '/' + s.src, {
+              alt: shotLabel(s, i),
+              sizes: '(max-width:620px) 58vw, 330px',
+              loading: i < 2 ? 'eager' : 'lazy'
+            }) +
+          '</span>' +
+        '</button>';
+    }).join('');
+
+    var dots = shots.map(function(s, i){
+      return '<button type="button" class="cover__dot" data-i="' + i + '" ' +
+        'aria-label="' + esc(shotLabel(s, i)) + '"' + (i ? '' : ' aria-current="true"') + '></button>';
+    }).join('');
+
+    return '<section class="gallery gallery--cover" aria-labelledby="gal-h">' +
+        galHead() +
+        '<div class="cover reveal" role="group" aria-roledescription="carousel" ' +
+             'aria-label="' + esc(t.name) + ' photographs">' +
+          '<div class="cover__frame">' +
+            '<div class="cover__deck">' + cards + '</div>' +
+          '</div>' +
+          '<button type="button" class="cover__arrow cover__arrow--prev" aria-label="Previous photograph"></button>' +
+          '<button type="button" class="cover__arrow cover__arrow--next" aria-label="Next photograph"></button>' +
+          '<div class="cover__cap" aria-live="polite">' +
+            '<p class="cover__n"></p>' +
+            '<p class="cover__title"></p>' +
+            '<p class="cover__sub"></p>' +
+          '</div>' +
+          '<div class="cover__dots">' + dots + '</div>' +
+        '</div>' +
+      '</section>';
+  }
+
+  /* --- filmstrip: full-bleed, the focused frame unveiling to full height ---
+     Every card shares one top edge and one height; the unfocused ones are
+     clipped to half. Clipping rather than resizing means the strip's layout
+     never changes as focus moves — the row is laid out once and the rest is
+     compositing — and the photograph doesn't rescale as it opens, so the
+     frame reads as being unveiled rather than swapped. */
+  function filmStrip(){
+    var cards = shots.map(function(s, i){
+      return '<button type="button" class="strip__card' + (i ? '' : ' is-on') + '" ' +
+          'data-i="' + i + '" data-lb="' + i + '" tabindex="' + (i ? '-1' : '0') + '" ' +
+          'aria-roledescription="slide" ' +
+          'aria-label="' + esc(shotLabel(s, i) + ' — ' + (i + 1) + ' of ' + shots.length) + '">' +
+          MT.img(t.folder + '/' + s.src, {
+            alt: shotLabel(s, i),
+            sizes: '(max-width:700px) 34vw, 240px',
+            loading: i < 2 ? 'eager' : 'lazy'
+          }) +
+          '<span class="strip__dim" aria-hidden="true"></span>' +
+        '</button>';
+    }).join('');
+
+    return '<section class="strip" aria-labelledby="gal-h">' +
+        '<div class="strip__intro">' + galHead() + '</div>' +
+        '<div class="strip__stage reveal" role="group" aria-roledescription="carousel" ' +
+             'aria-label="' + esc(t.name) + ' photographs">' +
+          '<div class="strip__bg" aria-hidden="true">' +
+            '<div class="strip__plate is-on"></div>' +
+            '<div class="strip__plate"></div>' +
+            '<div class="strip__hue"></div>' +
+            '<div class="strip__wash"></div>' +
+            '<div class="strip__grain"></div>' +
+          '</div>' +
+          '<div class="strip__copy">' +
+            '<h3 class="strip__title"></h3>' +
+            '<p class="strip__note">' + esc(t.name) + ' · ' + esc(t.duration) + '</p>' +
+            '<ul class="strip__meta"></ul>' +
+          '</div>' +
+          '<div class="strip__rail"><div class="strip__track">' + cards + '</div></div>' +
+          '<div class="strip__rule">' +
+            '<span class="strip__i">01</span>' +
+            '<span class="strip__of">' + pad2(shots.length) + '</span>' +
+            '<span class="strip__bar"><i style="width:' + (100 / shots.length).toFixed(3) + '%"></i></span>' +
+          '</div>' +
+        '</div>' +
       '</section>';
   }
 
@@ -286,14 +415,415 @@
     document.body.appendChild(defs);
   }
 
+  if(galStyle === 'coverflow') wireCover();
+  if(galStyle === 'filmstrip') wireStrip();
+
+  /* ---------- coverflow ----------
+     One fractional index, `pos`, is the whole state: the card at pos sits
+     centred and everything else is derived from its distance. Transforms are
+     written straight to the elements inside a single rAF rather than through
+     class changes, because sixty style recalculations a second over a deck of
+     prints is exactly the cost this page cannot afford. */
+  function wireCover(){
+    var wrap = root.querySelector('.cover');
+    if(!wrap) return;
+
+    var frame = wrap.querySelector('.cover__frame');
+    var deck  = wrap.querySelector('.cover__deck');
+    var cards = slice(deck.children);
+    var dots  = slice(wrap.querySelectorAll('.cover__dot'));
+    var cap   = wrap.querySelector('.cover__cap');
+    var capN  = wrap.querySelector('.cover__n');
+    var capT  = wrap.querySelector('.cover__title');
+    var capS  = wrap.querySelector('.cover__sub');
+    var n     = cards.length;
+
+    /* Tuned shallower than a jukebox: on paper the neighbours have to keep
+       reading as photographs, not as edges. */
+    var ROTATE = 42, DEPTH = 0.5, FALLOFF = 0.58, FADE = 0.16, GAP = 0.07;
+    /* Below four cards the ring folds onto itself and a card would appear
+       twice, so short decks simply run to their ends. */
+    var LOOP = n >= 4;
+
+    var pos = 0, target = 0, sel = 0, width = 0, raf = null, drag = null;
+
+    function ring(i, from){
+      var off = i - from;
+      if(!LOOP) return off;
+      off = ((off % n) + n) % n;
+      return off > n / 2 ? off - n : off;
+    }
+
+    function indexAt(p){ return ((Math.round(p) % n) + n) % n; }
+
+    function paint(){
+      if(!width) return;
+      var pitch = width * (1 + GAP);
+      for(var i = 0; i < n; i++){
+        var off  = ring(i, pos);
+        var dist = Math.abs(off);
+        /* Both the rake and the recession ease off with distance — doubling
+           it adds only about half again as much of each — so the second card
+           stays readable instead of folding shut. */
+        var ramp = Math.pow(dist, FALLOFF);
+        var tilt = Math.min(ROTATE * ramp, 76) * (off < 0 ? -1 : off > 0 ? 1 : 0);
+        var card = cards[i];
+        card.style.transform =
+          'translate3d(calc(-50% + ' + (off * pitch).toFixed(1) + 'px),0,' +
+          (-DEPTH * width * ramp).toFixed(1) + 'px) rotateY(' + (-tilt).toFixed(2) + 'deg)';
+        /* A card is teleported across the ring at exactly half a turn out, so
+           it has to have faded by then or the jump is visible. */
+        var edge = LOOP ? clamp(n / 2 - dist, 0, 1) : 1;
+        card.style.opacity = (Math.max(0, 1 - FADE * dist) * edge).toFixed(3);
+        card.style.zIndex  = 100 - Math.round(dist);
+      }
+    }
+
+    function caption(i){
+      var s = shots[i];
+      capN.textContent = pad2(i + 1) + ' / ' + pad2(n);
+      capT.textContent = s.title || '';
+      capS.textContent = s.sub || '';
+      /* Drop the class, flush, re-add: without the flush the browser never
+         sees the class leave, and the fade plays only once. */
+      cap.classList.remove('is-fresh');
+      void cap.offsetWidth;
+      cap.classList.add('is-fresh');
+    }
+
+    function select(i){
+      if(i === sel) return;
+      cards[sel].classList.remove('is-sel');
+      sel = i;
+      cards[sel].classList.add('is-sel');
+      for(var k = 0; k < n; k++) cards[k].tabIndex = k === i ? 0 : -1;
+      for(var d = 0; d < dots.length; d++){
+        if(d === i) dots[d].setAttribute('aria-current', 'true');
+        else dots[d].removeAttribute('aria-current');
+      }
+      caption(i);
+    }
+
+    function stop(){
+      if(raf !== null){ cancelAnimationFrame(raf); raf = null; }
+      /* will-change is a standing request for a compositor layer per card;
+         held permanently on a deck of photographs it costs real GPU memory on
+         the devices that can least spare it. */
+      deck.classList.remove('is-moving');
+    }
+
+    function settle(to){
+      stop();
+      target = to;
+      select(indexAt(to));
+      if(REDUCED.matches){ pos = to; paint(); return; }
+      deck.classList.add('is-moving');
+      raf = requestAnimationFrame(function step(){
+        var left = target - pos;
+        if(Math.abs(left) < 0.0006){ pos = target; paint(); stop(); return; }
+        pos += left * 0.17;          /* exponential ease-out, no overshoot */
+        paint();
+        raf = requestAnimationFrame(step);
+      });
+    }
+
+    function goTo(i){
+      /* Take the shorter way round rather than unwinding the whole ring. */
+      var to = LOOP ? i + Math.round((target - i) / n) * n : clamp(i, 0, n - 1);
+      settle(to);
+    }
+    function nudge(by){
+      var to = Math.round(target) + by;
+      settle(LOOP ? to : clamp(to, 0, n - 1));
+    }
+
+    /* ---- drag ---- */
+    frame.addEventListener('pointerdown', function(e){
+      if(e.button) return;
+      stop();
+      frame.setPointerCapture(e.pointerId);
+      target = pos;
+      drag = { id: e.pointerId, x: e.clientX, pos: pos, v: 0, t: e.timeStamp, moved: 0 };
+      deck.classList.add('is-moving');
+    });
+
+    frame.addEventListener('pointermove', function(e){
+      if(!drag || drag.id !== e.pointerId) return;
+      var pitch = width * (1 + GAP);
+      if(!pitch) return;
+      var dx = e.clientX - drag.x;
+      drag.moved = Math.max(drag.moved, Math.abs(dx));
+      var was = pos;
+      pos = drag.pos - dx / pitch;
+      if(!LOOP) pos = clamp(pos, 0, n - 1);
+      /* cards per second, for the throw */
+      drag.v = (pos - was) / Math.max(e.timeStamp - drag.t, 1) * 1000;
+      drag.t = e.timeStamp;
+      select(indexAt(pos));
+      paint();
+    });
+
+    var dragged = false;
+    function endDrag(e){
+      if(!drag || drag.id !== e.pointerId) return;
+      var carried = clamp(drag.v * 0.18, -2, 2);   /* let a flick carry, a little */
+      var to = Math.round(pos + carried);
+      /* pointerup lands before the click, so this is read in time to tell a
+         tap on a print from the end of a push. */
+      dragged = drag.moved > 6;
+      drag = null;
+      settle(LOOP ? to : clamp(to, 0, n - 1));
+    }
+    frame.addEventListener('pointerup', endDrag);
+    frame.addEventListener('pointercancel', endDrag);
+
+    /* ---- click, keys, dots ---- */
+    deck.addEventListener('click', function(e){
+      var card = e.target.closest('.cover__card');
+      if(!card || dragged) return;
+      var i = +card.dataset.i;
+      if(i === sel) openLightbox(i, card);
+      else goTo(i);
+    });
+
+    wrap.addEventListener('keydown', function(e){
+      var k = e.key;
+      if(k !== 'ArrowLeft' && k !== 'ArrowRight' && k !== 'Home' && k !== 'End') return;
+      e.preventDefault();
+      if(k === 'Home') goTo(0);
+      else if(k === 'End') goTo(n - 1);
+      else nudge(k === 'ArrowLeft' ? -1 : 1);
+      cards[sel].focus({ preventScroll: true });
+    });
+
+    dots.forEach(function(d){
+      d.addEventListener('click', function(){ goTo(+d.dataset.i); });
+    });
+    wrap.querySelector('.cover__arrow--prev').addEventListener('click', function(){ nudge(-1); });
+    wrap.querySelector('.cover__arrow--next').addEventListener('click', function(){ nudge(1); });
+
+    /* ---- measurement ----
+       Card width drives pitch, recession and perspective, so it is the only
+       thing worth measuring, and only when the box actually changes. */
+    function measure(){
+      var w = cards[0].offsetWidth;
+      if(w === width) return;
+      width = w;
+      paint();
+    }
+    cards[0].classList.add('is-sel');
+    measure();
+    caption(0);
+    if(window.ResizeObserver) new ResizeObserver(measure).observe(frame);
+    else window.addEventListener('resize', measure, { passive: true });
+    /* Fonts and images landing can change the card box after first paint. */
+    window.addEventListener('load', measure);
+  }
+
+  /* ---------- filmstrip ----------
+     The track is moved with one CSS transition on a transform, so a settle
+     costs the main thread nothing at all: no spring, no rAF, no per-frame JS.
+     The drag turns the transition off, writes the transform directly, and
+     hands the settle back to CSS on release. */
+  function wireStrip(){
+    var stage = root.querySelector('.strip__stage');
+    if(!stage) return;
+
+    var track  = stage.querySelector('.strip__track');
+    var cards  = slice(track.children);
+    var plates = slice(stage.querySelectorAll('.strip__plate'));
+    var hue    = stage.querySelector('.strip__hue');
+    var titleEl = stage.querySelector('.strip__title');
+    var metaEl  = stage.querySelector('.strip__meta');
+    var iEl     = stage.querySelector('.strip__i');
+    var barEl   = stage.querySelector('.strip__bar i');
+    var n = cards.length;
+
+    var at = 0, step = 0, home = 0, plate = 0, drag = null, x = 0, fits = false;
+
+    /* The backdrop is a blurred, hue-graded wash rather than a legible
+       photograph, so it is built from the smallest derivative that exists —
+       usually the very file the card itself already loaded. A sharper source
+       would cost a second download per frame and buy nothing you can see
+       through a 24px blur. */
+    function plateURL(i){ return MT.bg(t.folder + '/' + shots[i].src, 320); }
+
+    function xFor(i){ return fits ? home : home - i * step; }
+
+    function measure(){
+      var cw = cards[0].offsetWidth;
+      if(!cw) return;
+      var cs = getComputedStyle(track);
+      var gap = parseFloat(cs.columnGap || cs.gap) || 0;
+      step = cw + gap;
+      var full = n * step - gap;
+      /* A strip is meant to run off both edges of the stage. Four photographs
+         on a wide desktop cannot, and centring the focused frame would leave
+         the entire row stranded on one side of it. So when the whole strip
+         fits, it is centred and stands still, and the frames open where they
+         are; when it does not — a phone, or a longer gallery — the focused
+         frame comes to the middle as designed. */
+      fits = full <= stage.clientWidth * 0.86;
+      home = fits ? (stage.clientWidth - full) / 2
+                  : stage.clientWidth / 2 - cw / 2;
+      stage.classList.toggle('is-static', fits);
+      move(false);
+    }
+
+    function move(animate){
+      if(!animate) track.classList.add('is-still');
+      x = xFor(at);
+      track.style.transform = 'translate3d(' + x.toFixed(1) + 'px,0,0)';
+      if(!animate){
+        void track.offsetWidth;               /* flush, so the class lifts clean */
+        track.classList.remove('is-still');
+      }
+    }
+
+    function copy(i){
+      var s = shots[i];
+      /* Each line wipes up from behind its own edge. Rebuilding the nodes is
+         what restarts the animation — cheaper and more reliable than juggling
+         animation-name on the existing ones. */
+      titleEl.innerHTML = String(s.title || shotLabel(s, i)).split('\n')
+        .map(function(line, k){
+          return '<span class="l"><i style="--d:' + (k * 70) + 'ms">' + esc(line) + '</i></span>';
+        }).join('');
+      metaEl.innerHTML = (s.meta || []).map(function(m, k){
+        return '<li style="--d:' + (120 + k * 60) + 'ms">' + esc(m) + '</li>';
+      }).join('');
+      iEl.textContent = pad2(i + 1);
+      barEl.style.transform = 'translate3d(' + (i * 100) + '%,0,0)';
+    }
+
+    /* Swap the graded backdrop by crossfading two plates, so the incoming
+       bitmap is decoded before anything fades. */
+    var grading = 0;
+    function grade(i){
+      /* Pushing along the strip faster than the plates can load means several
+         swaps are in flight at once, all aimed at the same idle plate. Only
+         the last one asked for may land; without this the earlier ones fire
+         late, in order, and the one that arrives after the swap takes the
+         visible plate away with it. */
+      var mine = ++grading;
+      var url = plateURL(i);
+      var nextPlate = plates[1 - plate];
+
+      function show(){
+        if(mine !== grading) return;
+        if(plates[plate] === nextPlate) return;      /* already swapped */
+        nextPlate.classList.add('is-on');
+        plates[plate].classList.remove('is-on');
+        plate = 1 - plate;
+      }
+
+      hue.style.backgroundColor = shots[i].accent || '#8a8a8a';
+      if(nextPlate.dataset.url === url){ show(); return; }
+      nextPlate.dataset.url = url;
+      nextPlate.style.backgroundImage = 'url("' + url + '")';
+      var probe = new Image();
+      probe.onload = probe.onerror = show;
+      probe.src = url;
+      if(probe.complete) show();
+    }
+
+    function go(i, focusIt){
+      i = clamp(i, 0, n - 1);
+      if(i !== at){
+        cards[at].classList.remove('is-on');
+        cards[at].tabIndex = -1;
+        at = i;
+        cards[at].classList.add('is-on');
+        cards[at].tabIndex = 0;
+        copy(at);
+        grade(at);
+      }
+      move(true);
+      if(focusIt) cards[at].focus({ preventScroll: true });
+    }
+
+    /* ---- drag ---- */
+    stage.addEventListener('pointerdown', function(e){
+      if(fits || e.button || e.target.closest('a')) return;
+      stage.setPointerCapture(e.pointerId);
+      track.classList.add('is-still');
+      drag = { id: e.pointerId, x: e.clientX, from: x, v: 0, t: e.timeStamp, moved: 0 };
+    });
+
+    stage.addEventListener('pointermove', function(e){
+      if(!drag || drag.id !== e.pointerId) return;
+      var dx = e.clientX - drag.x;
+      drag.moved = Math.max(drag.moved, Math.abs(dx));
+      var was = x;
+      /* Rubber-band past the ends rather than stopping dead. */
+      x = drag.from + dx;
+      var lo = xFor(n - 1), hi = xFor(0);
+      if(x > hi) x = hi + (x - hi) * 0.32;
+      else if(x < lo) x = lo + (x - lo) * 0.32;
+      drag.v = (x - was) / Math.max(e.timeStamp - drag.t, 1) * 1000;
+      drag.t = e.timeStamp;
+      track.style.transform = 'translate3d(' + x.toFixed(1) + 'px,0,0)';
+    });
+
+    function endDrag(e){
+      if(!drag || drag.id !== e.pointerId) return;
+      var moved = drag.moved;
+      var thrown = x + clamp(drag.v * 0.12, -step * 1.6, step * 1.6);
+      drag = null;
+      track.classList.remove('is-still');
+      stage.dataset.moved = moved > 6 ? 1 : 0;
+      go(Math.round((home - thrown) / step));
+    }
+    stage.addEventListener('pointerup', endDrag);
+    stage.addEventListener('pointercancel', endDrag);
+
+    /* ---- click, keys, wheel ---- */
+    track.addEventListener('click', function(e){
+      var card = e.target.closest('.strip__card');
+      if(!card || +stage.dataset.moved) return;
+      var i = +card.dataset.i;
+      if(i === at) openLightbox(i, card);
+      else go(i);
+    });
+
+    stage.addEventListener('keydown', function(e){
+      var k = e.key, to = null;
+      if(k === 'ArrowLeft') to = at - 1;
+      else if(k === 'ArrowRight') to = at + 1;
+      else if(k === 'Home') to = 0;
+      else if(k === 'End') to = n - 1;
+      if(to === null) return;
+      e.preventDefault();
+      go(to, true);
+    });
+
+    /* Horizontal intent only. Swallowing vertical wheel would turn a
+       full-bleed strip into a scroll trap on the way down the page. */
+    var wheelLock = 0;
+    stage.addEventListener('wheel', function(e){
+      if(fits) return;
+      if(Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 12) return;
+      if(e.timeStamp < wheelLock) return;
+      e.preventDefault();
+      wheelLock = e.timeStamp + 380;
+      go(at + (e.deltaX > 0 ? 1 : -1));
+    }, { passive: false });
+
+    /* ---- start ---- */
+    copy(0);
+    grade(0);
+    measure();
+    if(window.ResizeObserver) new ResizeObserver(measure).observe(stage);
+    else window.addEventListener('resize', measure, { passive: true });
+    window.addEventListener('load', measure);
+  }
+
   /* ---------- ambience ----------
      verdant grows leaf vines down both margins as you scroll, bloom opens
      Brahma Kamal the same way, and nocturne drifts a starfield behind the
      page. All are decorative, all are silenced by prefers-reduced-motion,
      and the margin-hugging ones drop to a single column on narrow screens
      where two would sit under the text. */
-
-  var REDUCED = window.matchMedia('(prefers-reduced-motion:reduce)');
 
   /* How much clear space sits between the viewport edge and the text column.
      The ambience is drawn into that gutter; sizing it by measurement rather
@@ -306,10 +836,148 @@
     var pad = parseFloat(window.getComputedStyle(probe).paddingLeft) || 0;
     return Math.max(0, r.left + pad);
   }
+  /* Below this the stylesheet hides the second margin column, so building it
+     is pure cost: nodes to parse, memory to hold, and style to invalidate. */
+  var NARROW = window.matchMedia('(max-width:900px)');
+  function ONE_COLUMN(){ return NARROW.matches; }
+
   function columnWidth(){
     var m = marginColumn();
     if(m < 74) return 0;                       /* nothing worth drawing */
     return Math.max(112, Math.min(210, m - 10));
+  }
+
+  /* Plants are grouped into vertical bands and only the bands near the
+     viewport have their --grow updated. Without this, every plant on the page
+     restyles on every scroll frame: measured at 17.8ms median and 69.7ms peak
+     on a 24-core desktop, i.e. already past the 60fps budget before a phone
+     ever sees it. Banding keeps the per-frame set to what is actually on
+     screen. */
+  /* Band height. The live window is a fixed span of page, so shorter bands
+     track it more closely: the same window then covers fewer parked plants,
+     and a plant only costs a frame if it is genuinely near the viewport. */
+  var BAND = 450;
+
+  function bandWrap(items, height, bandPx){
+    var out = [], n = Math.max(1, Math.ceil(height / bandPx)), i;
+    for(i = 0; i < n; i++){
+      var y0 = i * bandPx, y1 = y0 + bandPx, inside = [];
+      for(var j = 0; j < items.length; j++){
+        if(items[j].y >= y0 && items[j].y < y1) inside.push(items[j].m);
+      }
+      if(inside.length){
+        out.push('<g class="amb-band" data-y0="' + y0 + '" data-y1="' + y1 + '">' +
+                 inside.join('') + '</g>');
+      }
+    }
+    return out.join('');
+  }
+
+  /* Page metrics for every scroll-driven effect here. Cached rather than
+     measured per frame: a getBoundingClientRect() inside a scroll handler
+     forces style and layout, and once another handler has written to the DOM
+     that same frame it forces the whole pipeline to run twice. */
+  var pageTop = 0, pageSpan = 1;
+  function remeasure(){
+    var r = root.getBoundingClientRect();
+    pageTop  = r.top + window.pageYOffset;
+    pageSpan = Math.max(1, r.height - window.innerHeight);
+  }
+  /* lead slightly, so a leaf has opened by the time you reach it */
+  function growth(y){ return clamp(((y - pageTop) / pageSpan) * 1.04 + 0.05, 0, 1); }
+
+  function bandDriver(layer, stemSelector){
+    var bands = [], stems = null, lastG = '';
+
+    function collect(){
+      bands = [];
+      lastG = '';
+      var els = layer.querySelectorAll('.amb-band');
+      for(var i = 0; i < els.length; i++){
+        bands.push({ el: els[i], y0: +els[i].dataset.y0, y1: +els[i].dataset.y1, state: '' });
+      }
+      stems = stemSelector ? layer.querySelectorAll(stemSelector) : null;
+    }
+
+    /* Bands outside the live window are parked at 0 or 1 once and then left
+       alone, so a frame only ever writes to the two or three bands actually
+       near the viewport — not to every plant on a ten-thousand-pixel page. */
+    function update(y){
+      var g = growth(y).toFixed(4);
+      var top = y - pageTop;
+      /* Growth saturates before the foot of the page, so the window has to be
+         part of the key — otherwise the last bands never go live and the
+         plants down there never open. */
+      var key = g + '|' + Math.round(top / 200);
+      if(key === lastG) return;
+      lastG = key;
+      /* The live window is the viewport plus half of one either side. Parking
+         the rest is not an approximation: a plant's --at is its own position
+         down the page, so everything above the window is past its opening and
+         belongs at 1, and everything below has not reached its opening and
+         belongs at 0. */
+      var vh = window.innerHeight, lo = top - vh * 0.5, hi = top + vh * 1.5;
+      for(var i = 0; i < bands.length; i++){
+        var b = bands[i];
+        if(b.y1 >= lo && b.y0 <= hi){
+          b.el.style.setProperty('--grow', g);
+          b.state = 'live';
+        } else if(b.y1 < lo){
+          if(b.state !== 'done'){ b.el.style.setProperty('--grow', '1'); b.state = 'done'; }
+        } else if(b.state !== 'wait'){
+          b.el.style.setProperty('--grow', '0'); b.state = 'wait';
+        }
+      }
+      /* One page-spanning stem cannot be banded, so it tracks progress alone. */
+      if(stems) for(var k = 0; k < stems.length; k++) stems[k].style.setProperty('--stem', g);
+    }
+
+    function full(){
+      lastG = '';
+      for(var i = 0; i < bands.length; i++){
+        bands[i].el.style.setProperty('--grow', '1');
+        bands[i].state = 'done';
+      }
+      if(stems) for(var k = 0; k < stems.length; k++) stems[k].style.setProperty('--stem', '1');
+    }
+
+    return { collect: collect, update: update, full: full };
+  }
+
+  /* Shared by both margin gardens: rebuild on a real size change, drive from
+     the one page-wide scroll bus, and hold everything open when the reader
+     has asked for no motion. */
+  function ambience(layer, build, stemSelector){
+    var drive = bandDriver(layer, stemSelector);
+    var lastH = 0, lastW = -1, lastOne = null;
+
+    function rebuild(force){
+      var h = root.offsetHeight, W = columnWidth(), one = ONE_COLUMN();
+      if(!h) return;
+      /* Ignore trivial reflows — rebuilding is thousands of nodes. */
+      if(!force && Math.abs(h - lastH) < 40 && W === lastW && one === lastOne) return;
+      lastH = h; lastW = W; lastOne = one;
+      layer.innerHTML = W ? build(h, W) : '';
+      drive.collect();
+      remeasure();
+      /* Drive the fresh nodes now rather than waiting for a frame. A rebuild
+         replaces every band element, and an undriven band holds --grow at 0 —
+         which is an empty margin, not a subtle difference. */
+      if(REDUCED.matches) drive.full();
+      else drive.update(window.pageYOffset);
+    }
+
+    rebuild(true);
+    if(!REDUCED.matches) MT.onScroll(drive.update);
+
+    var rt;
+    window.addEventListener('resize', function(){
+      clearTimeout(rt);
+      rt = setTimeout(rebuild, 180);
+    }, { passive: true });
+
+    /* Images landing changes the page height, so redraw once they settle. */
+    window.addEventListener('load', function(){ rebuild(); });
   }
 
   if(theme === 'verdant') buildVines();
@@ -322,8 +990,6 @@
     layer.className = 'vines';
     layer.setAttribute('aria-hidden', 'true');
     root.appendChild(layer);
-
-    var lastH = 0;
 
     /* Three lanceolate blades rather than one almond: asymmetric, drawn to a
        point, each on a short petiole with a midrib and side veins. The whole
@@ -369,7 +1035,8 @@
       /* Leaves must fit the gutter too: the SVG does not clip, so on a narrow
          window full-size blades reach past the column and into the prose. */
       var lf = Math.min(1, W / 160);
-      var seg = 268;
+      /* Longer bends on a weak device: fewer waves, fewer leaves, same plant. */
+      var seg = LITE ? 360 : 268;
       var n = Math.max(3, Math.ceil(height / seg));
       /* Cap below 1 so the final leaves reach full opacity by the page end:
          the opacity ramp is (grow - at) * 12. */
@@ -388,60 +1055,26 @@
 
         /* Leaves off the outside of each bend. Skipping some keeps it from
            reading as a repeating pattern, and keeps the node count down:
-           every leaf restyles when --grow changes. */
+           every leaf in a live band restyles when --grow changes. */
         var ly1 = y0 + seg * 0.30, ly2 = y0 + seg * 0.72;
-        parts.push(leaf(cx - 2 * dir, ly1, dir > 0 ? -32 : 212, at(ly1),
-                        i % 2 === 0, i, (0.95 + (i % 3) * 0.12) * lf));
-        if(i % 3 !== 2){
-          parts.push(leaf(baseX, ly2, dir > 0 ? 150 : 30, at(ly2),
-                          i % 3 === 0, i + 1, (0.82 + (i % 2) * 0.16) * lf));
+        parts.push({ y: ly1, m: leaf(cx - 2 * dir, ly1, dir > 0 ? -32 : 212, at(ly1),
+                        i % 2 === 0, i, (0.95 + (i % 3) * 0.12) * lf) });
+        if(i % 3 !== 2 && !LITE){
+          parts.push({ y: ly2, m: leaf(baseX, ly2, dir > 0 ? 150 : 30, at(ly2),
+                          i % 3 === 0, i + 1, (0.82 + (i % 2) * 0.16) * lf) });
         }
       }
 
       return '<svg class="v-' + side + '" width="' + W + '" height="' + height + '" ' +
                'viewBox="0 0 ' + W + ' ' + height + '" fill="none" aria-hidden="true">' +
                '<path class="vine-stem" pathLength="1" d="' + d + '"/>' +
-               parts.join('') +
+               bandWrap(parts, height, BAND) +
              '</svg>';
     }
 
-    var lastW = -1;
-    function rebuild(){
-      var h = root.offsetHeight, W = columnWidth();
-      if(!h) return;
-      if(Math.abs(h - lastH) < 40 && W === lastW) return;  /* ignore trivial reflows */
-      lastH = h; lastW = W;
-      layer.innerHTML = W ? (vine(h, 'left', W) + vine(h, 'right', W)) : '';
-    }
-
-    var lastRun = 0;
-    function onScroll(){
-      var now = (window.performance || Date).now();
-      if(now - lastRun < 16) return;
-      lastRun = now;
-      var r = root.getBoundingClientRect();
-      var span = r.height - window.innerHeight;
-      var p = span > 0 ? (-r.top) / span : 1;
-      /* lead slightly, so a leaf has opened by the time you reach it */
-      layer.style.setProperty('--grow', Math.max(0, Math.min(1, p * 1.04 + 0.05)).toFixed(4));
-    }
-
-    rebuild();
-    if(REDUCED.matches){
-      layer.style.setProperty('--grow', '1');
-    } else {
-      onScroll();
-      window.addEventListener('scroll', onScroll, { passive: true });
-    }
-
-    var rt;
-    window.addEventListener('resize', function(){
-      clearTimeout(rt);
-      rt = setTimeout(function(){ rebuild(); onScroll(); }, 180);
-    }, { passive: true });
-
-    /* Images landing changes the page height, so redraw once they settle. */
-    window.addEventListener('load', function(){ rebuild(); onScroll(); });
+    ambience(layer, function(h, W){
+      return vine(h, 'left', W) + (ONE_COLUMN() ? '' : vine(h, 'right', W));
+    }, '.vine-stem');
   }
 
   /* --- bloom (Roopkund) ---
@@ -460,8 +1093,6 @@
     layer.className = 'blooms';
     layer.setAttribute('aria-hidden', 'true');
     root.appendChild(layer);
-
-    var lastH = 0, lastW = -1;
 
     var seed = 90210;
     function rnd(){
@@ -588,14 +1219,15 @@
          you are scrolling, so swaying all hundred of them would burn the main
          thread for no visual gain — a meadow where a few stems move and the
          rest are still reads as natural anyway. */
-      var sways = rnd() < (back ? 0.18 : 0.45);
-      return '<g transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) +
-               ') scale(' + scale.toFixed(3) + ')">' +
-               '<g class="bloom-rank' + (back ? ' is-back' : '') +
-                 (sways ? ' bloom-sway' : '') +
-                 '" style="--sway:' + (7 + rnd() * 5).toFixed(1) + 's;--sway-delay:-' +
-                 (rnd() * 7).toFixed(1) + 's">' + inner + '</g>' +
-             '</g>';
+      var sways = !LITE && rnd() < (back ? 0.18 : 0.45);
+      return { y: y, m:
+        '<g transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) +
+          ') scale(' + scale.toFixed(3) + ')">' +
+          '<g class="bloom-rank' + (back ? ' is-back' : '') +
+            (sways ? ' bloom-sway' : '') +
+            '" style="--sway:' + (7 + rnd() * 5).toFixed(1) + 's;--sway-delay:-' +
+            (rnd() * 7).toFixed(1) + 's">' + inner + '</g>' +
+        '</g>' };
     }
 
     function garden(height, side, W){
@@ -607,6 +1239,9 @@
          varied gaps, so the column reads as a meadow edge and not a row. */
       var y = height * 0.06;
       var guard = 0;
+      /* Wider gaps between scenes on a weak device: the same meadow, thinned,
+         rather than a different design. */
+      var pitch = 1 / DENSITY;
       while(y < height * 0.99 && guard++ < 80){
         var at = Math.min(0.8, (y / height) * 0.8);
         var scene = pick(['feature', 'feature', 'spikes', 'drift', 'ferny']);
@@ -622,7 +1257,7 @@
             parts.push(place(bistorta(at + 0.008), mid + inward * (20 + rnd() * 12),
                              y - 2, 0.7 + rnd() * 0.25, true));
           }
-          y += 300 + rnd() * 120;
+          y += (300 + rnd() * 120) * pitch;
 
         } else if(scene === 'spikes'){
           var k = 2 + Math.floor(rnd() * 2);
@@ -634,7 +1269,7 @@
           }
           parts.push(place(anaphalis(at + 0.014), mid + (rnd() - 0.5) * (W * 0.4),
                            y + 14 + rnd() * 10, 0.75 + rnd() * 0.3, true));
-          y += 205 + rnd() * 95;
+          y += (205 + rnd() * 95) * pitch;
 
         } else if(scene === 'drift'){
           var m = 2 + Math.floor(rnd() * 2);
@@ -644,7 +1279,7 @@
                              y + j * (10 + rnd() * 12),
                              0.72 + rnd() * 0.4, j % 2 === 1));
           }
-          y += 195 + rnd() * 85;
+          y += (195 + rnd() * 85) * pitch;
 
         } else {
           parts.push(place(fern(at, flip), mid + inward * (rnd() * 14),
@@ -653,50 +1288,20 @@
             parts.push(place(anaphalis(at + 0.01), mid - inward * (14 + rnd() * 14),
                              y + 6, 0.7 + rnd() * 0.3, true));
           }
-          y += 215 + rnd() * 95;
+          y += (215 + rnd() * 95) * pitch;
         }
       }
 
       return '<svg class="b-' + side + '" width="' + W + '" height="' + height + '" ' +
                'viewBox="0 0 ' + W + ' ' + height + '" fill="none" aria-hidden="true">' +
-               parts.join('') +
+               bandWrap(parts, height, BAND) +
              '</svg>';
     }
 
-    function rebuild(){
-      var h = root.offsetHeight, W = columnWidth();
-      if(!h) return;
-      if(Math.abs(h - lastH) < 40 && W === lastW) return;
-      lastH = h; lastW = W;
+    ambience(layer, function(h, W){
       seed = 90210;                       /* same garden after a resize */
-      layer.innerHTML = W ? (garden(h, 'left', W) + garden(h, 'right', W)) : '';
-    }
-
-    var lastRun = 0;
-    function onScroll(){
-      var now = (window.performance || Date).now();
-      if(now - lastRun < 16) return;
-      lastRun = now;
-      var r = root.getBoundingClientRect();
-      var span = r.height - window.innerHeight;
-      var p = span > 0 ? (-r.top) / span : 1;
-      layer.style.setProperty('--grow', Math.max(0, Math.min(1, p * 1.04 + 0.05)).toFixed(4));
-    }
-
-    rebuild();
-    if(REDUCED.matches){
-      layer.style.setProperty('--grow', '1');
-    } else {
-      onScroll();
-      window.addEventListener('scroll', onScroll, { passive: true });
-    }
-
-    var rt;
-    window.addEventListener('resize', function(){
-      clearTimeout(rt);
-      rt = setTimeout(function(){ rebuild(); onScroll(); }, 180);
-    }, { passive: true });
-    window.addEventListener('load', function(){ rebuild(); onScroll(); });
+      return garden(h, 'left', W) + (ONE_COLUMN() ? '' : garden(h, 'right', W));
+    }, null);
   }
 
   /* --- nocturne --- */
@@ -712,12 +1317,17 @@
       return (seed - 1) / 2147483646;
     }
 
-    var count = window.innerWidth < 700 ? 46 : 78;
+    var count = LITE ? 30 : (window.innerWidth < 700 ? 46 : 78);
+    /* An element animating its own opacity gets its own compositor layer.
+       Eighty of those is fine on a laptop and a real cost on a cheap phone,
+       so the lighter build twinkles in three groups instead of individually:
+       three layers, one sky, and at these sizes you cannot tell. */
+    var groups = LITE ? ['', '', ''] : null;
     var html = '';
     for(var i = 0; i < count; i++){
       var size = rnd() < 0.86 ? (1 + rnd() * 1.3) : (2 + rnd() * 1.6);
       var warm = rnd() < 0.22;
-      html += '<span class="sky__star' + (warm ? ' is-warm' : '') + '" style="' +
+      var star = '<span class="sky__star' + (warm ? ' is-warm' : '') + '" style="' +
         'left:' + (rnd() * 100).toFixed(2) + '%;' +
         'top:' + (rnd() * 100).toFixed(2) + '%;' +
         'width:' + size.toFixed(2) + 'px;height:' + size.toFixed(2) + 'px;' +
@@ -726,15 +1336,27 @@
         '--min:' + (0.06 + rnd() * 0.16).toFixed(2) + ';' +
         '--max:' + (0.5 + rnd() * 0.5).toFixed(2) + ';' +
         '"></span>';
+      if(groups) groups[i % 3] += star;
+      else html += star;
+    }
+    if(groups){
+      html = groups.map(function(g, k){
+        return '<span class="sky__group" style="--dur:' + (5.5 + k * 1.9).toFixed(1) +
+               's;--delay:-' + (k * 2.3).toFixed(1) + 's">' + g + '</span>';
+      }).join('');
     }
     html += '<span class="sky__shoot" style="left:76%;top:12%;--delay:7s"></span>';
-    html += '<span class="sky__shoot" style="left:38%;top:5%;--delay:19s"></span>';
+    if(!LITE) html += '<span class="sky__shoot" style="left:38%;top:5%;--delay:19s"></span>';
 
     sky.innerHTML = html;
     document.body.appendChild(sky);
   }
 
-  /* ---------- lightbox ---------- */
+  /* ---------- lightbox ----------
+     Every gallery style hands over the same way: openLightbox(index, from).
+     `from` is where focus returns when the overlay closes. */
+  function openLightbox(){}
+
   if(shots.length) buildLightbox();
 
   function buildLightbox(){
@@ -802,8 +1424,14 @@
     box.addEventListener('click', function(e){
       if(e.target === box || e.target === stage) close();
     });
-    root.querySelectorAll('.shot__btn').forEach(function(btn){
-      btn.addEventListener('click', function(){ open(+btn.closest('.shot').dataset.i, btn); });
-    });
+    /* The framed grid opens on its own buttons; the two carousels call
+       openLightbox() themselves, because there a click has to mean "centre
+       this card" until the card is already centred. */
+    openLightbox = open;
+    if(galStyle === 'frames'){
+      root.querySelectorAll('[data-lb]').forEach(function(btn){
+        btn.addEventListener('click', function(){ open(+btn.dataset.lb, btn); });
+      });
+    }
   }
 })();

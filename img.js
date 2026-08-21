@@ -78,4 +78,51 @@
 
   MT.enc = enc;
   MT.esc = esc;
+
+  /* ── one scroll listener for the whole page ────────────────────────────────
+     Every extra window.addEventListener('scroll', …) is another main-thread
+     callback per frame, and each one that measures the page forces its own
+     style+layout pass. The trek page had four. They all subscribe here
+     instead: one passive listener, one rAF per frame, subscribers called in
+     registration order with the offset already read for them.
+
+     A handler that returns nothing is assumed to have written to the DOM, so
+     ordering matters — register readers before writers where it counts. */
+  var subs = [], queued = false;
+
+  function frame(){
+    queued = false;
+    var y = window.pageYOffset;
+    for (var i = 0; i < subs.length; i++) subs[i](y);
+  }
+
+  function kick(){
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(frame);
+  }
+
+  /* The first call is synchronous rather than deferred to a frame: anything
+     driven by scroll position is wrong until it has run once, and a tab that
+     loads in the background gets no animation frames at all until you look
+     at it — which would otherwise leave it holding its start state. */
+  MT.onScroll = function (fn) {
+    subs.push(fn);
+    fn(window.pageYOffset);
+    return fn;
+  };
+
+  /* For anything that changes the page without scrolling it — images landing,
+     a rebuild, a breakpoint crossing. */
+  MT.kick = kick;
+
+  window.addEventListener('scroll', kick, { passive: true });
+  window.addEventListener('resize', kick, { passive: true });
+
+  /* Low-power devices get a lighter build of the same design: fewer decorative
+     nodes, no idle animation, and the expensive paint features off. Both
+     hints are advisory and absent on Safari, so the fallback assumes a
+     capable machine rather than punishing every iPhone. */
+  MT.lite = (navigator.deviceMemory || 8) <= 4 ||
+            (navigator.hardwareConcurrency || 8) <= 4;
 })();
