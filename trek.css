@@ -936,15 +936,15 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .strip{
-  --stage-h:clamp(520px,86svh,860px);
-  /* Where the strip's shared top edge sits. Higher than the halfway line the
-     reference used, because the frames below it carry the section and the
-     headline above needs only enough room to set two lines. */
-  --strip-top:38%;
+  --stage-h:clamp(560px,92svh,980px);
+  /* Where the strip's shared top edge sits. Far higher than the halfway line
+     the reference used: the frames are what the section is for, and the
+     headline above needs only enough room to set two lines over a byline. */
+  --strip-top:27%;
   /* A ratio of the stage, so the strip keeps its proportions at any size —
      but floored and capped, because a frame this small stops reading as a
-     photograph and one this large stops leaving room for the headline. */
-  --card-h:clamp(240px,calc(var(--stage-h) * .52),470px);
+     photograph and one this large leaves no room for the headline. */
+  --card-h:clamp(300px,calc(var(--stage-h) * .64),620px);
   --card-w:calc(var(--card-h) * .75);
   --strip-pad:clamp(20px,5vw,72px);
   --dwell:4600ms;
@@ -1085,9 +1085,9 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 
 @media(max-width:700px){
   .strip{
-    --stage-h:clamp(480px,78svh,700px);
-    --strip-top:36%;
-    --card-h:clamp(210px,calc(var(--stage-h) * .5),340px)}
+    --stage-h:clamp(520px,84svh,760px);
+    --strip-top:25%;
+    --card-h:clamp(260px,calc(var(--stage-h) * .62),430px)}
   .strip__note{margin-top:10px}
   /* Three facts and a headline will not share a phone's width. */
   .strip__meta{display:none}

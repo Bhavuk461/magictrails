@@ -776,17 +776,38 @@
       dwellEl.style.animation = '';
     }
 
-    stage.addEventListener('pointerenter', function(){ hold('hover', true); });
-    stage.addEventListener('pointerleave', function(){ hold('hover', false); });
-    stage.addEventListener('focusin',  function(){ hold('focus', true); });
+    /* Hover has to mean "this reader is working the strip", and on a stage
+       this size mere presence does not: scrolling down the page with the
+       cursor at rest in the middle of the screen puts it over the frames, and
+       a plain pointerenter would then hold the walk for good. So the hold is
+       scoped to the row itself and released once the pointer has been still
+       for a moment — moving over the photographs pauses, resting does not. */
+    var IDLE = 3000, idleTimer = null;
+    track.addEventListener('pointermove', function(){
+      hold('hover', true);
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(function(){ hold('hover', false); }, IDLE);
+    });
+    track.addEventListener('pointerleave', function(){
+      clearTimeout(idleTimer);
+      hold('hover', false);
+    });
+
+    /* Keyboard focus holds; a mouse click does not. Clicking a frame focuses
+       its button and nothing takes that focus away again, so treating it as
+       engagement would stop the walk permanently on the first click. */
+    stage.addEventListener('focusin', function(e){
+      hold('focus', !!(e.target.matches && e.target.matches(':focus-visible')));
+    });
     stage.addEventListener('focusout', function(){ hold('focus', false); });
+
     document.addEventListener('visibilitychange', function(){
       hold('hidden', document.hidden);
     });
     if(window.IntersectionObserver){
       new IntersectionObserver(function(entries){
-        hold('away', !entries[0].isIntersecting);
-      }, { threshold: 0.25 }).observe(stage);
+        hold('away', !entries[entries.length - 1].isIntersecting);
+      }, { threshold: 0.1 }).observe(stage);
     } else {
       holds.away = false;
     }
