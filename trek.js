@@ -634,6 +634,7 @@
     var cards  = slice(track.children);
     var plates = slice(stage.querySelectorAll('.strip__plate'));
     var hue    = stage.querySelector('.strip__hue');
+    var copyEl  = stage.querySelector('.strip__copy');
     var titleEl = stage.querySelector('.strip__title');
     var metaEl  = stage.querySelector('.strip__meta');
     var iEl     = stage.querySelector('.strip__i');
@@ -674,7 +675,7 @@
       }
     }
 
-    function copy(i){
+    function writeCopy(i){
       var s = shots[i];
       /* Each line wipes up from behind its own edge. Rebuilding the nodes is
          what restarts the animation — cheaper and more reliable than juggling
@@ -686,8 +687,26 @@
       metaEl.innerHTML = (s.meta || []).map(function(m, k){
         return '<li style="--d:' + (120 + k * 60) + 'ms">' + esc(m) + '</li>';
       }).join('');
+      copyEl.classList.remove('is-out');
+    }
+
+    /* The headline is replaced wholesale, so with nothing to leave on it
+       hard-cuts while everything around it is still moving — which was most
+       of what read as abrupt. It fades out first, swaps behind the fade, and
+       wipes back in a beat after the frame it belongs to. */
+    var COPY_OUT = 200, copySeq = 0;
+
+    function copy(i, now){
+      /* Pushing along faster than the fade puts several swaps in flight;
+         only the last one asked for may write. */
+      var mine = ++copySeq;
+      /* The counter and the rail are not part of the fade — they track the
+         strip's position, so they move with it. */
       iEl.textContent = pad2(i + 1);
       barEl.style.transform = 'translate3d(' + (i * 100) + '%,0,0)';
+      if(now || REDUCED.matches){ writeCopy(i); return; }
+      copyEl.classList.add('is-out');
+      setTimeout(function(){ if(mine === copySeq) writeCopy(i); }, COPY_OUT);
     }
 
     /* Swap the graded backdrop by crossfading two plates, so the incoming
@@ -900,7 +919,7 @@
     }, { passive: false });
 
     /* ---- start ---- */
-    copy(0);
+    copy(0, true);
     grade(0);
     measure();
     arm();

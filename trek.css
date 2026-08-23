@@ -948,6 +948,11 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
   --card-w:calc(var(--card-h) * .75);
   --strip-pad:clamp(20px,5vw,72px);
   --dwell:3000ms;
+  /* The page's shared --ease is an expo-out: it leaves at speed and hauls up
+     hard. That is right for something small arriving, and wrong for half a
+     metre of filmstrip travelling — it reads as a snap. This one eases in as
+     well as out, so the strip gathers itself, glides, and settles. */
+  --strip-ease:cubic-bezier(.4,0,.15,1);
   position:relative;margin-bottom:clamp(64px,9vw,120px)}
 .strip__intro{
   max-width:var(--wrap);margin:0 auto clamp(20px,3vw,34px);
@@ -969,13 +974,13 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
   background-size:cover;background-position:center;
   filter:blur(24px) saturate(1.06);
   transform:scale(1.06);opacity:0;
-  transition:opacity .5s var(--ease),transform 1.6s var(--ease)}
+  transition:opacity .8s var(--strip-ease),transform 1.9s var(--strip-ease)}
 .strip__plate.is-on{opacity:1;transform:scale(1)}
 /* Keeps the photograph's light and takes the frame's hue. */
 .strip__hue{
   position:absolute;inset:0;background-color:#8a8a8a;
   mix-blend-mode:color;
-  transition:background-color .5s var(--ease)}
+  transition:background-color .8s var(--strip-ease)}
 .strip__wash{
   position:absolute;inset:0;
   background:linear-gradient(180deg,
@@ -999,7 +1004,7 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 .strip__title .l{display:block;overflow:hidden}
 .strip__title .l i{
   display:block;font-style:normal;
-  animation:mtLineUp .66s var(--ease) var(--d,0ms) both}
+  animation:mtLineUp .7s var(--strip-ease) var(--d,0ms) both}
 @keyframes mtLineUp{
   from{transform:translateY(110%)}
   to  {transform:none}
@@ -1007,6 +1012,11 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 .strip__note{
   margin-top:14px;font-size:.64rem;letter-spacing:.24em;text-transform:uppercase;
   color:rgba(255,255,255,.7)}
+/* The byline does not change between frames, so it is deliberately not part of
+   this — only the two things that do. */
+.strip__title,.strip__meta{transition:opacity .2s ease}
+.strip__copy.is-out .strip__title,
+.strip__copy.is-out .strip__meta{opacity:0}
 .strip__meta{
   position:absolute;right:var(--strip-pad);bottom:clamp(16px,2.6vh,30px);
   display:flex;gap:clamp(14px,3vw,42px);
@@ -1014,7 +1024,7 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 .strip__meta li{
   font-size:.62rem;letter-spacing:.22em;white-space:nowrap;
   color:rgba(255,255,255,.72);
-  animation:mtFactIn .5s var(--ease) var(--d,0ms) both}
+  animation:mtFactIn .55s var(--strip-ease) var(--d,0ms) both}
 @keyframes mtFactIn{
   from{opacity:0;transform:translateY(7px)}
   to  {opacity:1;transform:none}
@@ -1025,7 +1035,7 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
   display:flex;align-items:flex-start;height:100%;
   gap:clamp(7px,.9vw,16px);
   will-change:transform;
-  transition:transform .6s var(--ease)}
+  transition:transform .85s var(--strip-ease)}
 /* Dragging writes the transform every move; a transition would fight it. */
 .strip__track.is-still{transition:none}
 
@@ -1036,15 +1046,19 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
   -webkit-appearance:none;appearance:none;
   overflow:hidden;cursor:pointer;
   -webkit-clip-path:inset(0 0 50% 0);clip-path:inset(0 0 50% 0);
-  transition:-webkit-clip-path .5s var(--ease),clip-path .5s var(--ease)}
-.strip__card.is-on{-webkit-clip-path:inset(0 0 0 0);clip-path:inset(0 0 0 0);cursor:zoom-in}
+  transition:-webkit-clip-path .75s var(--strip-ease),clip-path .75s var(--strip-ease)}
+.strip__card.is-on{
+  -webkit-clip-path:inset(0 0 0 0);clip-path:inset(0 0 0 0);cursor:zoom-in;
+  /* Only the opening frame waits: losing .is-on drops the delay, so the frame
+     being left closes at once and the new one unveils into the gap. */
+  transition-delay:.1s}
 .strip__card img{
   display:block;width:100%;height:100%;object-fit:cover;
   /* Anchored above centre, so a clipped frame still shows its subject. */
   object-position:50% 34%}
 .strip__dim{
   position:absolute;inset:0;background:#05070e;opacity:.42;
-  transition:opacity .5s var(--ease)}
+  transition:opacity .75s var(--strip-ease)}
 .strip__card.is-on .strip__dim{opacity:0}
 /* clip-path clips a box-shadow away with everything else outside the box, so
    focus is marked from the inside: a hairline of the page's own light around
@@ -1052,7 +1066,7 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 .strip__card::after{
   content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
   border:1px solid transparent;
-  transition:border-color .5s var(--ease)}
+  transition:border-color .75s var(--strip-ease)}
 .strip__card.is-on::after{border-color:rgba(255,255,255,.34)}
 .strip__card:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
 
@@ -1069,7 +1083,7 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 .strip__bar i{
   position:absolute;top:0;bottom:0;left:0;overflow:hidden;
   background:rgba(255,255,255,.42);
-  transition:transform .6s var(--ease)}
+  transition:transform .85s var(--strip-ease)}
 /* Fills across the current segment over one dwell, so the strip moving on its
    own is something you can see coming rather than something that happens. */
 .strip__dwell{
@@ -1109,7 +1123,8 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 }
 @media(prefers-reduced-motion:reduce){
   .strip__track,.strip__card,.strip__dim,.strip__bar i,
-  .strip__plate,.strip__hue,.strip__card::after{transition:none}
+  .strip__plate,.strip__hue,.strip__card::after,
+  .strip__title,.strip__meta{transition:none}
   .strip__title .l i,.strip__meta li,.strip__dwell{animation:none}
 }
 
