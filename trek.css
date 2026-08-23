@@ -936,18 +936,18 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .strip{
-  --stage-h:clamp(560px,92svh,980px);
+  --stage-h:clamp(560px,96svh,1040px);
   /* Where the strip's shared top edge sits. Far higher than the halfway line
      the reference used: the frames are what the section is for, and the
      headline above needs only enough room to set two lines over a byline. */
-  --strip-top:27%;
+  --strip-top:23%;
   /* A ratio of the stage, so the strip keeps its proportions at any size —
      but floored and capped, because a frame this small stops reading as a
      photograph and one this large leaves no room for the headline. */
-  --card-h:clamp(300px,calc(var(--stage-h) * .64),620px);
+  --card-h:clamp(320px,calc(var(--stage-h) * .70),700px);
   --card-w:calc(var(--card-h) * .75);
   --strip-pad:clamp(20px,5vw,72px);
-  --dwell:4600ms;
+  --dwell:3000ms;
   position:relative;margin-bottom:clamp(64px,9vw,120px)}
 .strip__intro{
   max-width:var(--wrap);margin:0 auto clamp(20px,3vw,34px);
@@ -969,13 +969,13 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
   background-size:cover;background-position:center;
   filter:blur(24px) saturate(1.06);
   transform:scale(1.06);opacity:0;
-  transition:opacity .62s var(--ease),transform 1.8s var(--ease)}
+  transition:opacity .5s var(--ease),transform 1.6s var(--ease)}
 .strip__plate.is-on{opacity:1;transform:scale(1)}
 /* Keeps the photograph's light and takes the frame's hue. */
 .strip__hue{
   position:absolute;inset:0;background-color:#8a8a8a;
   mix-blend-mode:color;
-  transition:background-color .62s var(--ease)}
+  transition:background-color .5s var(--ease)}
 .strip__wash{
   position:absolute;inset:0;
   background:linear-gradient(180deg,
@@ -994,7 +994,7 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
   pointer-events:none}
 .strip__title{
   font-family:'Fraunces',serif;font-weight:600;
-  font-size:clamp(2rem,5.2vw,4rem);line-height:.94;letter-spacing:-.03em;
+  font-size:clamp(2rem,min(5.2vw,7.4svh),4rem);line-height:.94;letter-spacing:-.03em;
   color:#fff;text-shadow:0 2px 34px rgba(0,0,0,.34)}
 .strip__title .l{display:block;overflow:hidden}
 .strip__title .l i{
@@ -1025,7 +1025,7 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
   display:flex;align-items:flex-start;height:100%;
   gap:clamp(7px,.9vw,16px);
   will-change:transform;
-  transition:transform .72s var(--ease)}
+  transition:transform .6s var(--ease)}
 /* Dragging writes the transform every move; a transition would fight it. */
 .strip__track.is-still{transition:none}
 
@@ -1036,7 +1036,7 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
   -webkit-appearance:none;appearance:none;
   overflow:hidden;cursor:pointer;
   -webkit-clip-path:inset(0 0 50% 0);clip-path:inset(0 0 50% 0);
-  transition:-webkit-clip-path .62s var(--ease),clip-path .62s var(--ease)}
+  transition:-webkit-clip-path .5s var(--ease),clip-path .5s var(--ease)}
 .strip__card.is-on{-webkit-clip-path:inset(0 0 0 0);clip-path:inset(0 0 0 0);cursor:zoom-in}
 .strip__card img{
   display:block;width:100%;height:100%;object-fit:cover;
@@ -1044,7 +1044,7 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
   object-position:50% 34%}
 .strip__dim{
   position:absolute;inset:0;background:#05070e;opacity:.42;
-  transition:opacity .62s var(--ease)}
+  transition:opacity .5s var(--ease)}
 .strip__card.is-on .strip__dim{opacity:0}
 /* clip-path clips a box-shadow away with everything else outside the box, so
    focus is marked from the inside: a hairline of the page's own light around
@@ -1052,7 +1052,7 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 .strip__card::after{
   content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
   border:1px solid transparent;
-  transition:border-color .62s var(--ease)}
+  transition:border-color .5s var(--ease)}
 .strip__card.is-on::after{border-color:rgba(255,255,255,.34)}
 .strip__card:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
 
@@ -1069,7 +1069,7 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 .strip__bar i{
   position:absolute;top:0;bottom:0;left:0;overflow:hidden;
   background:rgba(255,255,255,.42);
-  transition:transform .72s var(--ease)}
+  transition:transform .6s var(--ease)}
 /* Fills across the current segment over one dwell, so the strip moving on its
    own is something you can see coming rather than something that happens. */
 .strip__dwell{
@@ -1083,11 +1083,25 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
   to  {transform:scaleX(1)}
 }
 
+/* A wide but short screen runs out of stage height before the frame runs out
+   of ambition: at 1280x610 the headline had three pixels of clearance and the
+   rail sat on the frames. Give a little of the frame back, and let the
+   headline come down with it. Placed above the phone rules so those still win
+   on a small portrait screen. */
+@media(max-height:720px){
+  .strip{--card-h:clamp(300px,calc(var(--stage-h) * .66),700px)}
+  .strip__title{font-size:clamp(1.7rem,min(5.2vw,6.6svh),4rem)}
+  .strip__note{margin-top:8px}
+}
+
 @media(max-width:700px){
   .strip{
-    --stage-h:clamp(520px,84svh,760px);
-    --strip-top:25%;
-    --card-h:clamp(260px,calc(var(--stage-h) * .62),430px)}
+    --stage-h:clamp(520px,88svh,820px);
+    --strip-top:22%;
+    /* Height would run the frame nearly edge to edge on a phone, so width
+       gets a say too — the neighbours have to stay visible for the strip to
+       read as a strip. */
+    --card-h:clamp(280px,min(calc(var(--stage-h) * .68),104vw),500px)}
   .strip__note{margin-top:10px}
   /* Three facts and a headline will not share a phone's width. */
   .strip__meta{display:none}
