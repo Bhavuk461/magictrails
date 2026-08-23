@@ -71,6 +71,14 @@
   var DENSITY = LITE ? 0.55 : 1;
 
   function slice(list){ return Array.prototype.slice.call(list); }
+  /* Read a duration custom property in milliseconds, so a dwell can live in
+     the stylesheet next to the bar that draws it and never drift from it. */
+  function msVar(el, name, fallback){
+    var v = String(getComputedStyle(el).getPropertyValue(name)).trim();
+    var f = parseFloat(v);
+    if(!f) return fallback;
+    return /ms$/.test(v) ? f : f * 1000;
+  }
   function clamp(v, lo, hi){ return v < lo ? lo : v > hi ? hi : v; }
 
   /* ---------- hero ---------- */
@@ -279,7 +287,7 @@
     }).join('');
 
     return '<section class="gallery gallery--cover" aria-labelledby="gal-h">' +
-        galHead() +
+        '<div class="cover__intro">' + galHead() + '</div>' +
         '<div class="cover reveal" role="group" aria-roledescription="carousel" ' +
              'aria-label="' + esc(t.name) + ' photographs">' +
           '<div class="cover__frame">' +
@@ -293,6 +301,7 @@
             '<p class="cover__sub"></p>' +
           '</div>' +
           '<div class="cover__dots">' + dots + '</div>' +
+          '<div class="cover__dwell" aria-hidden="true"><i></i></div>' +
         '</div>' +
       '</section>';
   }
@@ -480,11 +489,14 @@
       }
     }
 
-    function caption(i){
+    var CAP_OUT = 200, capSeq = 0;
+
+    function writeCap(i){
       var s = shots[i];
       capN.textContent = pad2(i + 1) + ' / ' + pad2(n);
       capT.textContent = s.title || '';
       capS.textContent = s.sub || '';
+      cap.classList.remove('is-out');
       /* Drop the class, flush, re-add: without the flush the browser never
          sees the class leave, and the fade plays only once. */
       cap.classList.remove('is-fresh');
@@ -492,7 +504,18 @@
       cap.classList.add('is-fresh');
     }
 
-    function select(i){
+    /* Replaced wholesale, so with nothing to leave on it hard-cuts while the
+       deck is still turning. It fades out, swaps behind the fade, and rises
+       back in. A drag is the exception — there the caption should keep up with
+       the card under your finger, not lag it. */
+    function caption(i, now){
+      var mine = ++capSeq;
+      if(now || REDUCED.matches){ writeCap(i); return; }
+      cap.classList.add('is-out');
+      setTimeout(function(){ if(mine === capSeq) writeCap(i); }, CAP_OUT);
+    }
+
+    function select(i, now){
       if(i === sel) return;
       cards[sel].classList.remove('is-sel');
       sel = i;
@@ -502,7 +525,7 @@
         if(d === i) dots[d].setAttribute('aria-current', 'true');
         else dots[d].removeAttribute('aria-current');
       }
-      caption(i);
+      caption(i, now);
     }
 
     function stop(){
@@ -513,18 +536,31 @@
       deck.classList.remove('is-moving');
     }
 
+    /* An exponential decay is fastest on its first frame and crawls at the
+       end — the same shape as the expo easing that made the filmstrip read as
+       a snap. A fixed tween on a curve that eases in as well as out lets the
+       deck gather itself, travel, and settle. */
+    var MOVE = 820;
+    function ease(p){
+      return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+    }
+
     function settle(to){
       stop();
       target = to;
       select(indexAt(to));
+      redwell();
+      arm();
       if(REDUCED.matches){ pos = to; paint(); return; }
       deck.classList.add('is-moving');
-      raf = requestAnimationFrame(function step(){
-        var left = target - pos;
-        if(Math.abs(left) < 0.0006){ pos = target; paint(); stop(); return; }
-        pos += left * 0.17;          /* exponential ease-out, no overshoot */
+      var from = pos, span = to - from, t0 = 0;
+      raf = requestAnimationFrame(function step(now){
+        if(!t0) t0 = now;
+        var p = Math.min(1, (now - t0) / MOVE);
+        pos = from + span * ease(p);
         paint();
-        raf = requestAnimationFrame(step);
+        if(p < 1){ raf = requestAnimationFrame(step); }
+        else { pos = to; paint(); stop(); }
       });
     }
 
@@ -536,6 +572,74 @@
     function nudge(by){
       var to = Math.round(target) + by;
       settle(LOOP ? to : clamp(to, 0, n - 1));
+    }
+
+    /* ---- autoplay ----
+       Same terms as the filmstrip: the deck turns on its own, and anything
+       suggesting the reader is working it holds. Hover is scoped to the deck
+       and released once the pointer has been still, because a resting cursor
+       is not engagement; focus holds only when it is keyboard focus, because
+       clicking a print focuses it and nothing ever takes that focus back. */
+    var dwellEl = wrap.querySelector('.cover__dwell i');
+    var DWELL = msVar(wrap, '--dwell', 3400), RESUME = 9000, IDLE = 3000;
+    var timer = null, resumeTimer = null, idleTimer = null;
+    var holds = { hover: false, focus: false, drag: false, away: true, hidden: false };
+
+    function held(){
+      for(var k in holds) if(holds[k]) return true;
+      return false;
+    }
+
+    function arm(){
+      if(timer){ clearTimeout(timer); timer = null; }
+      var run = !held() && !REDUCED.matches && n > 1;
+      wrap.classList.toggle('is-playing', run);
+      if(run) timer = setTimeout(function(){ timer = null; nudge(1); }, DWELL);
+    }
+
+    function hold(key, on){
+      if(holds[key] === on) return;
+      holds[key] = on;
+      arm();
+    }
+
+    /* An explicit choice hands the deck over for a while rather than ending
+       the walk, so it neither fights the reader nor dies at the first click. */
+    function handOver(){
+      hold('drag', true);
+      clearTimeout(resumeTimer);
+      resumeTimer = setTimeout(function(){ hold('drag', false); }, RESUME);
+    }
+
+    function redwell(){
+      if(!dwellEl) return;
+      dwellEl.style.animation = 'none';
+      void dwellEl.offsetWidth;
+      dwellEl.style.animation = '';
+    }
+
+    deck.addEventListener('pointermove', function(){
+      hold('hover', true);
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(function(){ hold('hover', false); }, IDLE);
+    });
+    deck.addEventListener('pointerleave', function(){
+      clearTimeout(idleTimer);
+      hold('hover', false);
+    });
+    wrap.addEventListener('focusin', function(e){
+      hold('focus', !!(e.target.matches && e.target.matches(':focus-visible')));
+    });
+    wrap.addEventListener('focusout', function(){ hold('focus', false); });
+    document.addEventListener('visibilitychange', function(){
+      hold('hidden', document.hidden);
+    });
+    if(window.IntersectionObserver){
+      new IntersectionObserver(function(entries){
+        hold('away', !entries[entries.length - 1].isIntersecting);
+      }, { threshold: 0.1 }).observe(wrap);
+    } else {
+      holds.away = false;
     }
 
     /* ---- drag ---- */
@@ -560,7 +664,7 @@
       /* cards per second, for the throw */
       drag.v = (pos - was) / Math.max(e.timeStamp - drag.t, 1) * 1000;
       drag.t = e.timeStamp;
-      select(indexAt(pos));
+      select(indexAt(pos), true);
       paint();
     });
 
@@ -572,6 +676,7 @@
       /* pointerup lands before the click, so this is read in time to tell a
          tap on a print from the end of a push. */
       dragged = drag.moved > 6;
+      if(dragged) handOver();
       drag = null;
       settle(LOOP ? to : clamp(to, 0, n - 1));
     }
@@ -583,6 +688,7 @@
       var card = e.target.closest('.cover__card');
       if(!card || dragged) return;
       var i = +card.dataset.i;
+      handOver();
       if(i === sel) openLightbox(i, card);
       else goTo(i);
     });
@@ -591,6 +697,7 @@
       var k = e.key;
       if(k !== 'ArrowLeft' && k !== 'ArrowRight' && k !== 'Home' && k !== 'End') return;
       e.preventDefault();
+      handOver();
       if(k === 'Home') goTo(0);
       else if(k === 'End') goTo(n - 1);
       else nudge(k === 'ArrowLeft' ? -1 : 1);
@@ -598,10 +705,10 @@
     });
 
     dots.forEach(function(d){
-      d.addEventListener('click', function(){ goTo(+d.dataset.i); });
+      d.addEventListener('click', function(){ handOver(); goTo(+d.dataset.i); });
     });
-    wrap.querySelector('.cover__arrow--prev').addEventListener('click', function(){ nudge(-1); });
-    wrap.querySelector('.cover__arrow--next').addEventListener('click', function(){ nudge(1); });
+    wrap.querySelector('.cover__arrow--prev').addEventListener('click', function(){ handOver(); nudge(-1); });
+    wrap.querySelector('.cover__arrow--next').addEventListener('click', function(){ handOver(); nudge(1); });
 
     /* ---- measurement ----
        Card width drives pitch, recession and perspective, so it is the only
@@ -614,11 +721,12 @@
     }
     cards[0].classList.add('is-sel');
     measure();
-    caption(0);
+    caption(0, true);
     if(window.ResizeObserver) new ResizeObserver(measure).observe(frame);
     else window.addEventListener('resize', measure, { passive: true });
     /* Fonts and images landing can change the card box after first paint. */
     window.addEventListener('load', measure);
+    arm();
   }
 
   /* ---------- filmstrip ----------
@@ -750,12 +858,7 @@
     /* Taken from the stylesheet, where the dwell fill's animation reads it
        too, so the timer and the bar can never drift apart. */
     var dwellEl = stage.querySelector('.strip__dwell');
-    var DWELL = (function(){
-      var v = String(getComputedStyle(stage).getPropertyValue('--dwell')).trim();
-      var f = parseFloat(v);
-      if(!f) return 4600;
-      return /ms$/.test(v) ? f : f * 1000;
-    })();
+    var DWELL = msVar(stage, '--dwell', 3000);
     var RESUME = 9000;
     var timer = null, resumeTimer = null;
     var holds = { hover: false, focus: false, drag: false, away: true, hidden: false };

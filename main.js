@@ -398,8 +398,6 @@
 
   /* ========== PARALLAX + SCROLL PROGRESS ========== */
   var parallax = Array.prototype.slice.call(document.querySelectorAll('.parallax'));
-  var progress = document.querySelector('.scroll-progress');
-  var lastPct = -1;
 
   /* Multi-megabyte layers being transformed every frame is the main source of
      scroll jank on phones, and reduced-motion should silence it everywhere. */
@@ -427,28 +425,17 @@
           'translate3d(0,' + (reads[j][1] * -reads[j][2]) + 'px,0) scale(1.12)';
       }
     }
-
-    if(progress){
-      /* Rounded to whole percent: the bar is 100vw wide, so sub-pixel widths
-         are invisible but still cost a layout + paint on every frame. */
-      var pct = docSpan > 0 ? Math.round(y / docSpan * 100) : 0;
-      if(pct !== lastPct){ progress.style.width = pct + '%'; lastPct = pct; }
-    }
   }
 
-  /* scrollHeight is a layout read. Taken here it would run after another
-     subscriber has already written to the DOM this frame, which forces the
-     whole style-and-layout pipeline a second time — so it is measured when
-     the page actually changes size instead. */
-  var docSpan = 0, sliderTop = 0, sliderBot = 0;
+  /* A rect taken inside the frame would land after the parallax has written
+     its transforms, forcing a second layout pass every frame — so the page is
+     measured when it actually changes size instead. */
+  var sliderTop = 0, sliderBot = 0;
   var slider = document.querySelector('.cine-slider');
 
   function measurePage(){
-    docSpan = document.documentElement.scrollHeight - window.innerHeight;
     if(slider){
-      /* Page-space bounds, so the header check below needs no rect of its own.
-         Reading one during the frame would land after the parallax has written
-         its transforms, which forces a second layout pass every frame. */
+      /* Page-space bounds, so the header check below needs no rect of its own. */
       var r = slider.getBoundingClientRect();
       sliderTop = r.top + window.pageYOffset;
       sliderBot = r.bottom + window.pageYOffset;

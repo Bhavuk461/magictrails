@@ -79,6 +79,17 @@ html[data-theme="nocturne"] body{
   background-image:
     radial-gradient(120% 80% at 50% 0%, #16203c 0%, var(--bg) 45%, #070a15 100%);
 }
+/* A radial gradient is sized against the element's own box, and on a phone
+   the body is a very tall, very narrow one: the same ellipse that reads as a
+   broad horizon wash on a desktop (2262x4000) becomes 450x4630 here — a shaft
+   of light standing down the middle of the page, which is the glow that kept
+   turning up in the night theme. There is nothing to gain from a radial at
+   this aspect, so the sky simply lightens toward the top instead. */
+@media(max-width:700px){
+  html[data-theme="nocturne"] body{
+    background-image:linear-gradient(180deg, #131c33 0%, var(--bg) 38%, #070a15 100%)}
+}
+
 html[data-theme="nocturne"] .site-header{
   background:rgba(11,16,32,.74);
   box-shadow:0 1px 0 rgba(255,255,255,.06)}
@@ -808,16 +819,25 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
    the viewport and the script measures exactly one thing: the card's width.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-.cover{
-  --cover-card:clamp(172px,25vw,320px);
-  --mat:clamp(7px,.9vw,13px);
-  --pad-y:clamp(22px,3.6vw,44px);
-  --deck-h:calc(var(--cover-card) + var(--mat) * 2 + 2px);
-  position:relative}
+/* The deck runs the full width of the page rather than the text column: at
+   this size the prints need the room, and a deck that reaches the edges is
+   what lets the neighbours stay whole instead of being clipped in half. */
+.gallery--cover{max-width:none;padding-left:0;padding-right:0}
+.cover__intro{max-width:var(--wrap);margin:0 auto;padding:0 var(--gutter)}
 
-/* The deck runs wider than the text column, and clips at its own padded box
-   so the prints' shadows still have room to fall. */
-.gallery--cover .cover__frame{margin-inline:calc(var(--gutter) * -1)}
+.cover{
+  --cover-card:clamp(190px,26vw,460px);
+  --mat:clamp(8px,.8vw,16px);
+  --pad-y:clamp(26px,3.4vw,52px);
+  /* Border-box, so the mat and the hairline are already inside the card's
+     width — and the print inside them is square. The deck is exactly as tall
+     as a card is wide. */
+  --deck-h:var(--cover-card);
+  --dwell:3400ms;
+  /* The same gentler curve the filmstrip uses, for the same reason: the
+     page's shared --ease leaves at speed and hauls up hard. */
+  --cover-ease:cubic-bezier(.4,0,.15,1);
+  position:relative}
 .cover__frame{
   overflow:hidden;
   padding:var(--pad-y) 0;
@@ -849,8 +869,12 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 .cover__card:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
 
 .cover__print{display:block;position:relative;overflow:hidden}
+/* height:auto matters. MT.img writes the real width and height onto every
+   img, and a presentational height beats aspect-ratio whenever the other axis
+   is definite — so without this the print takes the photograph's own height
+   and is clipped by the deck. */
 .cover__print img{
-  display:block;width:100%;aspect-ratio:1/1;object-fit:cover;
+  display:block;width:100%;height:auto;aspect-ratio:1/1;object-fit:cover;
   /* the same hairline the mat frame puts against its photograph */
   outline:1px solid var(--line);outline-offset:-1px}
 
@@ -867,9 +891,9 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
   content:'';width:9px;height:9px;
   border-left:1.5px solid var(--ink-soft);
   border-bottom:1.5px solid var(--ink-soft)}
-.cover__arrow--prev{left:-6px}
+.cover__arrow--prev{left:clamp(10px,3vw,56px)}
 .cover__arrow--prev::before{transform:rotate(45deg) translate(1px,-1px)}
-.cover__arrow--next{right:-6px}
+.cover__arrow--next{right:clamp(10px,3vw,56px)}
 .cover__arrow--next::before{transform:rotate(-135deg) translate(1px,-1px)}
 .cover__arrow:hover{background:var(--bg-2);border-color:var(--accent)}
 .cover__arrow:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
@@ -878,7 +902,9 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
    as you push through photographs with names of different lengths. */
 .cover__cap{
   margin-top:clamp(14px,2vw,22px);text-align:center;
-  min-height:5.6em}
+  min-height:5.6em;
+  transition:opacity .22s ease,transform .22s ease}
+.cover__cap.is-out{opacity:0;transform:translateY(-4px)}
 .cover__n{
   font-size:.62rem;letter-spacing:.24em;color:var(--muted);
   font-variant-numeric:tabular-nums}
@@ -910,13 +936,30 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 .cover__dot[aria-current]::before{opacity:1;background:var(--accent);transform:scale(1.3)}
 .cover__dot:focus-visible{outline:2px solid var(--accent);outline-offset:0;border-radius:50%}
 
+/* The deck walks itself, and a hairline filling under the dots is how that
+   reads as intended rather than as the page moving on its own. A rule is the
+   journal's own furniture, so it costs the design nothing. */
+.cover__dwell{
+  position:relative;overflow:hidden;
+  width:min(150px,34vw);height:1px;
+  margin:clamp(12px,1.4vw,18px) auto 0;
+  background:var(--line)}
+.cover__dwell i{
+  position:absolute;inset:0;background:var(--accent);
+  transform:scaleX(0);transform-origin:0 50%;
+  animation:mtDwell var(--dwell) linear forwards;
+  animation-play-state:paused}
+.cover.is-playing .cover__dwell i{animation-play-state:running}
+
 @media(max-width:620px){
+  .cover{--cover-card:clamp(190px,58vw,320px)}
   .cover__arrow{display:none}
   .cover__cap{min-height:6.4em}
 }
 @media(prefers-reduced-motion:reduce){
-  .cover__card{transition:none}
+  .cover__card,.cover__cap{transition:none}
   .cover__cap.is-fresh > *{animation:none}
+  .cover__dwell i{animation:none;transform:scaleX(1)}
 }
 
 
