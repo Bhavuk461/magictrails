@@ -377,11 +377,13 @@ html[data-theme="nocturne"] .prose .intro::first-letter{
   opacity:0;transition:opacity .26s var(--ease)}
 .lightbox.open{opacity:1}
 .lightbox[hidden]{display:none}
+/* These sources are 3:4, so on a short window it is the height that binds —
+   hence a cap close to the full viewport rather than a comfortable margin. */
 .lightbox__stage{
-  max-width:min(1400px,94vw);max-height:88svh;display:flex;
+  max-width:min(1600px,96vw);max-height:94svh;display:flex;
   align-items:center;justify-content:center}
 .lightbox__stage img{
-  max-width:min(1400px,94vw);max-height:88svh;width:auto;height:auto;object-fit:contain}
+  max-width:min(1600px,96vw);max-height:94svh;width:auto;height:auto;object-fit:contain}
 .lightbox__ui{position:absolute;inset:0;pointer-events:none;z-index:2}
 .lightbox__ui button{
   position:absolute;pointer-events:auto;
@@ -934,13 +936,18 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .strip{
-  --stage-h:clamp(430px,72svh,700px);
+  --stage-h:clamp(520px,86svh,860px);
+  /* Where the strip's shared top edge sits. Higher than the halfway line the
+     reference used, because the frames below it carry the section and the
+     headline above needs only enough room to set two lines. */
+  --strip-top:38%;
   /* A ratio of the stage, so the strip keeps its proportions at any size —
      but floored and capped, because a frame this small stops reading as a
      photograph and one this large stops leaving room for the headline. */
-  --card-h:clamp(170px,calc(var(--stage-h) * .38),260px);
+  --card-h:clamp(240px,calc(var(--stage-h) * .52),470px);
   --card-w:calc(var(--card-h) * .75);
   --strip-pad:clamp(20px,5vw,72px);
+  --dwell:4600ms;
   position:relative;margin-bottom:clamp(64px,9vw,120px)}
 .strip__intro{
   max-width:var(--wrap);margin:0 auto clamp(20px,3vw,34px);
@@ -981,7 +988,7 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 
 /* Headline block, sitting on the strip's shared top edge. */
 .strip__copy{
-  position:absolute;inset:0 0 auto 0;height:50%;z-index:2;
+  position:absolute;inset:0 0 auto 0;height:var(--strip-top);z-index:2;
   display:flex;flex-direction:column;justify-content:flex-end;
   padding:0 var(--strip-pad) clamp(16px,2.6vh,30px);
   pointer-events:none}
@@ -1013,10 +1020,10 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
   to  {opacity:1;transform:none}
 }
 
-.strip__rail{position:absolute;inset:50% 0 auto 0;height:var(--card-h);z-index:3}
+.strip__rail{position:absolute;inset:var(--strip-top) 0 auto 0;height:var(--card-h);z-index:3}
 .strip__track{
   display:flex;align-items:flex-start;height:100%;
-  gap:clamp(5px,.7vw,11px);
+  gap:clamp(7px,.9vw,16px);
   will-change:transform;
   transition:transform .72s var(--ease)}
 /* Dragging writes the transform every move; a transition would fight it. */
@@ -1036,9 +1043,17 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
   /* Anchored above centre, so a clipped frame still shows its subject. */
   object-position:50% 34%}
 .strip__dim{
-  position:absolute;inset:0;background:#05070e;opacity:.24;
+  position:absolute;inset:0;background:#05070e;opacity:.42;
   transition:opacity .62s var(--ease)}
 .strip__card.is-on .strip__dim{opacity:0}
+/* clip-path clips a box-shadow away with everything else outside the box, so
+   focus is marked from the inside: a hairline of the page's own light around
+   the frame that has opened. */
+.strip__card::after{
+  content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
+  border:1px solid transparent;
+  transition:border-color .62s var(--ease)}
+.strip__card.is-on::after{border-color:rgba(255,255,255,.34)}
 .strip__card:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
 
 .strip__rule{
@@ -1049,16 +1064,30 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
   font-variant-numeric:tabular-nums}
 .strip__of{text-align:right}
 .strip__bar{
-  grid-column:1 / -1;position:relative;height:1px;margin-top:9px;
-  background:rgba(255,255,255,.26)}
+  grid-column:1 / -1;position:relative;height:2px;margin-top:9px;
+  background:rgba(255,255,255,.22)}
 .strip__bar i{
-  position:absolute;top:0;bottom:0;left:0;background:#fff;
+  position:absolute;top:0;bottom:0;left:0;overflow:hidden;
+  background:rgba(255,255,255,.42);
   transition:transform .72s var(--ease)}
+/* Fills across the current segment over one dwell, so the strip moving on its
+   own is something you can see coming rather than something that happens. */
+.strip__dwell{
+  position:absolute;inset:0;background:#fff;
+  transform:scaleX(0);transform-origin:0 50%;
+  animation:mtDwell var(--dwell) linear forwards;
+  animation-play-state:paused}
+.strip__stage.is-playing .strip__dwell{animation-play-state:running}
+@keyframes mtDwell{
+  from{transform:scaleX(0)}
+  to  {transform:scaleX(1)}
+}
 
 @media(max-width:700px){
   .strip{
-    --stage-h:clamp(390px,64svh,560px);
-    --card-h:clamp(138px,calc(var(--stage-h) * .36),196px)}
+    --stage-h:clamp(480px,78svh,700px);
+    --strip-top:36%;
+    --card-h:clamp(210px,calc(var(--stage-h) * .5),340px)}
   .strip__note{margin-top:10px}
   /* Three facts and a headline will not share a phone's width. */
   .strip__meta{display:none}
@@ -1066,8 +1095,8 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 }
 @media(prefers-reduced-motion:reduce){
   .strip__track,.strip__card,.strip__dim,.strip__bar i,
-  .strip__plate,.strip__hue{transition:none}
-  .strip__title .l i,.strip__meta li{animation:none}
+  .strip__plate,.strip__hue,.strip__card::after{transition:none}
+  .strip__title .l i,.strip__meta li,.strip__dwell{animation:none}
 }
 
 
@@ -1097,6 +1126,3 @@ html.is-lite .strip__plate,
 html.is-lite .strip__plate.is-on{
   filter:blur(15px);transform:scale(1.05);
   transition:opacity .42s var(--ease)}
-/* A strip that fits its stage does not slide, so it should not offer to. */
-.strip__stage.is-static,
-.strip__stage.is-static:active{cursor:default}

@@ -311,7 +311,7 @@
           'aria-label="' + esc(shotLabel(s, i) + ' — ' + (i + 1) + ' of ' + shots.length) + '">' +
           MT.img(t.folder + '/' + s.src, {
             alt: shotLabel(s, i),
-            sizes: '(max-width:700px) 34vw, 240px',
+            sizes: '(max-width:700px) 62vw, 350px',
             loading: i < 2 ? 'eager' : 'lazy'
           }) +
           '<span class="strip__dim" aria-hidden="true"></span>' +
@@ -338,7 +338,8 @@
           '<div class="strip__rule">' +
             '<span class="strip__i">01</span>' +
             '<span class="strip__of">' + pad2(shots.length) + '</span>' +
-            '<span class="strip__bar"><i style="width:' + (100 / shots.length).toFixed(3) + '%"></i></span>' +
+            '<span class="strip__bar"><i style="width:' + (100 / shots.length).toFixed(3) + '%">' +
+              '<b class="strip__dwell"></b></i></span>' +
           '</div>' +
         '</div>' +
       '</section>';
@@ -639,7 +640,7 @@
     var barEl   = stage.querySelector('.strip__bar i');
     var n = cards.length;
 
-    var at = 0, step = 0, home = 0, plate = 0, drag = null, x = 0, fits = false;
+    var at = 0, step = 0, home = 0, plate = 0, drag = null, x = 0;
 
     /* The backdrop is a blurred, hue-graded wash rather than a legible
        photograph, so it is built from the smallest derivative that exists —
@@ -648,7 +649,7 @@
        through a 24px blur. */
     function plateURL(i){ return MT.bg(t.folder + '/' + shots[i].src, 320); }
 
-    function xFor(i){ return fits ? home : home - i * step; }
+    function xFor(i){ return home - i * step; }
 
     function measure(){
       var cw = cards[0].offsetWidth;
@@ -656,17 +657,10 @@
       var cs = getComputedStyle(track);
       var gap = parseFloat(cs.columnGap || cs.gap) || 0;
       step = cw + gap;
-      var full = n * step - gap;
-      /* A strip is meant to run off both edges of the stage. Four photographs
-         on a wide desktop cannot, and centring the focused frame would leave
-         the entire row stranded on one side of it. So when the whole strip
-         fits, it is centred and stands still, and the frames open where they
-         are; when it does not — a phone, or a longer gallery — the focused
-         frame comes to the middle as designed. */
-      fits = full <= stage.clientWidth * 0.86;
-      home = fits ? (stage.clientWidth - full) / 2
-                  : stage.clientWidth / 2 - cw / 2;
-      stage.classList.toggle('is-static', fits);
+      /* The focused frame always comes to the middle of the stage; the strip
+         slides under it. With frames this size the row reaches the edges on
+         its own, so there is nothing to be gained by ever holding it still. */
+      home = stage.clientWidth / 2 - cw / 2;
       move(false);
     }
 
@@ -727,6 +721,76 @@
       if(probe.complete) show();
     }
 
+    /* ---- autoplay ----
+       The strip walks itself so the section has life without being touched.
+       Anything that suggests the reader is engaged holds it: the pointer over
+       the stage, keyboard focus inside it, a drag in progress, the section
+       scrolled out of view, or the tab in the background. The last two are as
+       much about cost as manners — an unwatched carousel that keeps swapping
+       graded backdrops is pure waste on a device that can least afford it. */
+    /* Taken from the stylesheet, where the dwell fill's animation reads it
+       too, so the timer and the bar can never drift apart. */
+    var dwellEl = stage.querySelector('.strip__dwell');
+    var DWELL = (function(){
+      var v = String(getComputedStyle(stage).getPropertyValue('--dwell')).trim();
+      var f = parseFloat(v);
+      if(!f) return 4600;
+      return /ms$/.test(v) ? f : f * 1000;
+    })();
+    var RESUME = 9000;
+    var timer = null, resumeTimer = null;
+    var holds = { hover: false, focus: false, drag: false, away: true, hidden: false };
+
+    function held(){
+      for(var k in holds) if(holds[k]) return true;
+      return false;
+    }
+
+    function arm(){
+      if(timer){ clearTimeout(timer); timer = null; }
+      var run = !held() && !REDUCED.matches && n > 1;
+      stage.classList.toggle('is-playing', run);
+      if(run) timer = setTimeout(function(){ timer = null; go(at >= n - 1 ? 0 : at + 1); }, DWELL);
+    }
+
+    function hold(key, on){
+      if(holds[key] === on) return;
+      holds[key] = on;
+      arm();
+    }
+
+    /* An explicit choice pauses the walk rather than ending it, so the strip
+       does not fight the reader but does pick itself back up. */
+    function handOver(){
+      hold('drag', true);
+      clearTimeout(resumeTimer);
+      resumeTimer = setTimeout(function(){ hold('drag', false); }, RESUME);
+    }
+
+    /* Restart the fill from zero on every advance. Dropping the animation and
+       flushing is what makes the browser treat it as a new one. */
+    function redwell(){
+      if(!dwellEl) return;
+      dwellEl.style.animation = 'none';
+      void dwellEl.offsetWidth;
+      dwellEl.style.animation = '';
+    }
+
+    stage.addEventListener('pointerenter', function(){ hold('hover', true); });
+    stage.addEventListener('pointerleave', function(){ hold('hover', false); });
+    stage.addEventListener('focusin',  function(){ hold('focus', true); });
+    stage.addEventListener('focusout', function(){ hold('focus', false); });
+    document.addEventListener('visibilitychange', function(){
+      hold('hidden', document.hidden);
+    });
+    if(window.IntersectionObserver){
+      new IntersectionObserver(function(entries){
+        hold('away', !entries[0].isIntersecting);
+      }, { threshold: 0.25 }).observe(stage);
+    } else {
+      holds.away = false;
+    }
+
     function go(i, focusIt){
       i = clamp(i, 0, n - 1);
       if(i !== at){
@@ -739,12 +803,14 @@
         grade(at);
       }
       move(true);
+      redwell();
+      arm();
       if(focusIt) cards[at].focus({ preventScroll: true });
     }
 
     /* ---- drag ---- */
     stage.addEventListener('pointerdown', function(e){
-      if(fits || e.button || e.target.closest('a')) return;
+      if(e.button || e.target.closest('a')) return;
       stage.setPointerCapture(e.pointerId);
       track.classList.add('is-still');
       drag = { id: e.pointerId, x: e.clientX, from: x, v: 0, t: e.timeStamp, moved: 0 };
@@ -772,6 +838,7 @@
       drag = null;
       track.classList.remove('is-still');
       stage.dataset.moved = moved > 6 ? 1 : 0;
+      handOver();
       go(Math.round((home - thrown) / step));
     }
     stage.addEventListener('pointerup', endDrag);
@@ -782,6 +849,7 @@
       var card = e.target.closest('.strip__card');
       if(!card || +stage.dataset.moved) return;
       var i = +card.dataset.i;
+      handOver();
       if(i === at) openLightbox(i, card);
       else go(i);
     });
@@ -794,6 +862,7 @@
       else if(k === 'End') to = n - 1;
       if(to === null) return;
       e.preventDefault();
+      handOver();
       go(to, true);
     });
 
@@ -801,11 +870,11 @@
        full-bleed strip into a scroll trap on the way down the page. */
     var wheelLock = 0;
     stage.addEventListener('wheel', function(e){
-      if(fits) return;
       if(Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 12) return;
       if(e.timeStamp < wheelLock) return;
       e.preventDefault();
       wheelLock = e.timeStamp + 380;
+      handOver();
       go(at + (e.deltaX > 0 ? 1 : -1));
     }, { passive: false });
 
@@ -813,6 +882,7 @@
     copy(0);
     grade(0);
     measure();
+    arm();
     if(window.ResizeObserver) new ResizeObserver(measure).observe(stage);
     else window.addEventListener('resize', measure, { passive: true });
     window.addEventListener('load', measure);
