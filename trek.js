@@ -71,6 +71,17 @@
   var DENSITY = LITE ? 0.55 : 1;
 
   function slice(list){ return Array.prototype.slice.call(list); }
+
+  /* Both carousels pause while the lightbox is up and pick themselves back up
+     when it closes — which is the whole point of opening a frame full size.
+     Declared here, above everything that registers with it: the carousels are
+     wired long before the lightbox section runs. */
+  var lightboxWatchers = [];
+  function onLightbox(fn){ lightboxWatchers.push(fn); }
+  function tellLightbox(open){
+    for(var i = 0; i < lightboxWatchers.length; i++) lightboxWatchers[i](open);
+  }
+
   /* Read a duration custom property in milliseconds, so a dwell can live in
      the stylesheet next to the bar that draws it and never drift from it. */
   function msVar(el, name, fallback){
@@ -274,7 +285,10 @@
           '<span class="cover__print">' +
             MT.img(t.folder + '/' + s.src, {
               alt: shotLabel(s, i),
-              sizes: '(max-width:620px) 58vw, 330px',
+              /* The print is cropped from a wider source, so the file has to be
+                 wider than the box it lands in or the browser scales it up —
+                 which is what made these look soft. */
+              sizes: '(max-width:620px) 92vw, 720px',
               loading: i < 2 ? 'eager' : 'lazy'
             }) +
           '</span>' +
@@ -583,7 +597,7 @@
     var dwellEl = wrap.querySelector('.cover__dwell i');
     var DWELL = msVar(wrap, '--dwell', 3400), RESUME = 9000, IDLE = 3000;
     var timer = null, resumeTimer = null, idleTimer = null;
-    var holds = { hover: false, focus: false, drag: false, away: true, hidden: false };
+    var holds = { hover: false, lightbox: false, drag: false, away: true, hidden: false };
 
     function held(){
       for(var k in holds) if(holds[k]) return true;
@@ -627,10 +641,7 @@
       clearTimeout(idleTimer);
       hold('hover', false);
     });
-    wrap.addEventListener('focusin', function(e){
-      hold('focus', !!(e.target.matches && e.target.matches(':focus-visible')));
-    });
-    wrap.addEventListener('focusout', function(){ hold('focus', false); });
+    onLightbox(function(open){ hold('lightbox', open); });
     document.addEventListener('visibilitychange', function(){
       hold('hidden', document.hidden);
     });
@@ -643,21 +654,41 @@
     }
 
     /* ---- drag ---- */
+    /* No setPointerCapture. Capturing retargets the compatibility mouse
+       events too, so the click that follows a tap is dispatched at the frame
+       instead of the print — and a handler delegated on the deck never hears
+       it. Tracking the drag on the window costs nothing and leaves the click
+       where it belongs. */
+    /* A press is not yet a drag. Nothing is taken over until the pointer has
+       actually travelled, because a tap that stopped the deck and re-settled it
+       would move the selection off the very print being tapped — which is what
+       made a click land as "centre this" instead of "open this". */
     frame.addEventListener('pointerdown', function(e){
       if(e.button) return;
-      stop();
-      frame.setPointerCapture(e.pointerId);
-      target = pos;
-      drag = { id: e.pointerId, x: e.clientX, pos: pos, v: 0, t: e.timeStamp, moved: 0 };
-      deck.classList.add('is-moving');
+      drag = { id: e.pointerId, x: e.clientX, pos: pos, v: 0, t: e.timeStamp,
+               moved: 0, started: false };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', endDrag);
+      window.addEventListener('pointercancel', endDrag);
     });
 
-    frame.addEventListener('pointermove', function(e){
+    function onMove(e){
       if(!drag || drag.id !== e.pointerId) return;
       var pitch = width * (1 + GAP);
       if(!pitch) return;
       var dx = e.clientX - drag.x;
       drag.moved = Math.max(drag.moved, Math.abs(dx));
+      if(!drag.started){
+        if(drag.moved <= 6) return;
+        /* Take over from wherever the tween had got to, not from where it began. */
+        drag.started = true;
+        stop();
+        drag.pos = pos;
+        drag.x = e.clientX;
+        target = pos;
+        deck.classList.add('is-moving');
+        return;
+      }
       var was = pos;
       pos = drag.pos - dx / pitch;
       if(!LOOP) pos = clamp(pos, 0, n - 1);
@@ -666,31 +697,31 @@
       drag.t = e.timeStamp;
       select(indexAt(pos), true);
       paint();
-    });
+    }
 
     var dragged = false;
     function endDrag(e){
       if(!drag || drag.id !== e.pointerId) return;
-      var carried = clamp(drag.v * 0.18, -2, 2);   /* let a flick carry, a little */
-      var to = Math.round(pos + carried);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', endDrag);
+      window.removeEventListener('pointercancel', endDrag);
       /* pointerup lands before the click, so this is read in time to tell a
          tap on a print from the end of a push. */
-      dragged = drag.moved > 6;
-      if(dragged) handOver();
+      dragged = drag.started;
+      var carried = clamp(drag.v * 0.18, -2, 2);   /* let a flick carry, a little */
+      var to = Math.round(pos + carried);
       drag = null;
+      if(!dragged) return;              /* a tap: leave the deck alone */
+      handOver();
       settle(LOOP ? to : clamp(to, 0, n - 1));
     }
-    frame.addEventListener('pointerup', endDrag);
-    frame.addEventListener('pointercancel', endDrag);
-
     /* ---- click, keys, dots ---- */
     deck.addEventListener('click', function(e){
       var card = e.target.closest('.cover__card');
       if(!card || dragged) return;
       var i = +card.dataset.i;
-      handOver();
-      if(i === sel) openLightbox(i, card);
-      else goTo(i);
+      if(i === sel){ openLightbox(i, card); return; }
+      goTo(i);
     });
 
     wrap.addEventListener('keydown', function(e){
@@ -861,7 +892,7 @@
     var DWELL = msVar(stage, '--dwell', 3000);
     var RESUME = 9000;
     var timer = null, resumeTimer = null;
-    var holds = { hover: false, focus: false, drag: false, away: true, hidden: false };
+    var holds = { hover: false, lightbox: false, drag: false, away: true, hidden: false };
 
     function held(){
       for(var k in holds) if(holds[k]) return true;
@@ -918,10 +949,7 @@
     /* Keyboard focus holds; a mouse click does not. Clicking a frame focuses
        its button and nothing takes that focus away again, so treating it as
        engagement would stop the walk permanently on the first click. */
-    stage.addEventListener('focusin', function(e){
-      hold('focus', !!(e.target.matches && e.target.matches(':focus-visible')));
-    });
-    stage.addEventListener('focusout', function(){ hold('focus', false); });
+    onLightbox(function(open){ hold('lightbox', open); });
 
     document.addEventListener('visibilitychange', function(){
       hold('hidden', document.hidden);
@@ -952,17 +980,34 @@
     }
 
     /* ---- drag ---- */
+    /* Tracked on the window rather than through setPointerCapture: capturing
+       retargets the click that follows a tap to the capture element, and the
+       handler that opens a frame is delegated on the track. */
     stage.addEventListener('pointerdown', function(e){
       if(e.button || e.target.closest('a')) return;
-      stage.setPointerCapture(e.pointerId);
-      track.classList.add('is-still');
-      drag = { id: e.pointerId, x: e.clientX, from: x, v: 0, t: e.timeStamp, moved: 0 };
+      drag = { id: e.pointerId, x: e.clientX, from: x, v: 0, t: e.timeStamp,
+               moved: 0, started: false };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', endDrag);
+      window.addEventListener('pointercancel', endDrag);
     });
 
-    stage.addEventListener('pointermove', function(e){
+    function onMove(e){
       if(!drag || drag.id !== e.pointerId) return;
       var dx = e.clientX - drag.x;
       drag.moved = Math.max(drag.moved, Math.abs(dx));
+      if(!drag.started){
+        if(drag.moved <= 6) return;
+        /* Only now does the transition come off, and the drag starts from
+           wherever the track actually is rather than where it was headed. */
+        drag.started = true;
+        var m = getComputedStyle(track).transform;
+        if(m && m !== 'none' && window.DOMMatrix) x = new DOMMatrix(m).m41;
+        track.classList.add('is-still');
+        drag.from = x;
+        drag.x = e.clientX;
+        return;
+      }
       var was = x;
       /* Rubber-band past the ends rather than stopping dead. */
       x = drag.from + dx;
@@ -972,29 +1017,29 @@
       drag.v = (x - was) / Math.max(e.timeStamp - drag.t, 1) * 1000;
       drag.t = e.timeStamp;
       track.style.transform = 'translate3d(' + x.toFixed(1) + 'px,0,0)';
-    });
+    }
 
     function endDrag(e){
       if(!drag || drag.id !== e.pointerId) return;
-      var moved = drag.moved;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', endDrag);
+      window.removeEventListener('pointercancel', endDrag);
+      var started = drag.started;
       var thrown = x + clamp(drag.v * 0.12, -step * 1.6, step * 1.6);
       drag = null;
+      stage.dataset.moved = started ? 1 : 0;
+      if(!started) return;              /* a tap: leave the strip alone */
       track.classList.remove('is-still');
-      stage.dataset.moved = moved > 6 ? 1 : 0;
       handOver();
       go(Math.round((home - thrown) / step));
     }
-    stage.addEventListener('pointerup', endDrag);
-    stage.addEventListener('pointercancel', endDrag);
-
     /* ---- click, keys, wheel ---- */
     track.addEventListener('click', function(e){
       var card = e.target.closest('.strip__card');
       if(!card || +stage.dataset.moved) return;
       var i = +card.dataset.i;
-      handOver();
-      if(i === at) openLightbox(i, card);
-      else go(i);
+      if(i === at){ openLightbox(i, card); return; }
+      go(i);
     });
 
     stage.addEventListener('keydown', function(e){
@@ -1606,6 +1651,7 @@
       void box.offsetHeight;
       box.classList.add('open');
       document.documentElement.style.overflow = 'hidden';
+      tellLightbox(true);
       render();
       closeB.focus();
       document.addEventListener('keydown', onKey);
@@ -1613,6 +1659,7 @@
     function close(){
       box.classList.remove('open');
       document.documentElement.style.overflow = '';
+      tellLightbox(false);
       document.removeEventListener('keydown', onKey);
       setTimeout(function(){ box.hidden = true; stage.innerHTML = ''; }, 260);
       if(trigger && trigger.focus) trigger.focus();

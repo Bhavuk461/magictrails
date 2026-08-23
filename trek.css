@@ -57,7 +57,9 @@ html[data-theme="bloom"]{
 html[data-theme="verdant"] body,
 html[data-theme="bloom"] body{
   background-color:var(--bg);
-  background-image:radial-gradient(120% 80% at 50% -10%, #f4f6ea 0%, var(--bg) 45%, var(--bg-2) 100%);
+  /* Linear for the same reason as the night sky: a radial is sized against
+     the body’s own box, which on a phone is far taller than it is wide. */
+  background-image:linear-gradient(180deg, #f4f6ea 0%, var(--bg) 34%, var(--bg-2) 100%);
 }
 
 /* ---- nocturne: night. Warm amber accent keeps it recognisably MagicTrails
@@ -75,19 +77,13 @@ html[data-theme="nocturne"]{
 }
 html[data-theme="nocturne"] body{
   background-color:var(--bg);
-  /* No moonlight — just the sky falling off to black, so the stars carry it. */
-  background-image:
-    radial-gradient(120% 80% at 50% 0%, #16203c 0%, var(--bg) 45%, #070a15 100%);
-}
-/* A radial gradient is sized against the element's own box, and on a phone
-   the body is a very tall, very narrow one: the same ellipse that reads as a
-   broad horizon wash on a desktop (2262x4000) becomes 450x4630 here — a shaft
-   of light standing down the middle of the page, which is the glow that kept
-   turning up in the night theme. There is nothing to gain from a radial at
-   this aspect, so the sky simply lightens toward the top instead. */
-@media(max-width:700px){
-  html[data-theme="nocturne"] body{
-    background-image:linear-gradient(180deg, #131c33 0%, var(--bg) 38%, #070a15 100%)}
+  /* No moonlight — just the sky falling off to black, so the stars carry it.
+     Linear, not radial: a radial gradient is sized against its own element’s
+     box, and the body is a very tall, very narrow one. The ellipse that reads
+     as a broad horizon wash on a desktop becomes a shaft of light standing
+     down the middle of a phone — which is the glow that kept coming back. A
+     vertical fall-off is the same sky at every aspect. */
+  background-image:linear-gradient(180deg, #141d36 0%, var(--bg) 32%, #070a15 100%);
 }
 
 html[data-theme="nocturne"] .site-header{
@@ -826,13 +822,18 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 .cover__intro{max-width:var(--wrap);margin:0 auto;padding:0 var(--gutter)}
 
 .cover{
-  --cover-card:clamp(190px,26vw,460px);
+  --cover-card:clamp(240px,34vw,620px);
   --mat:clamp(8px,.8vw,16px);
   --pad-y:clamp(26px,3.4vw,52px);
-  /* Border-box, so the mat and the hairline are already inside the card's
-     width — and the print inside them is square. The deck is exactly as tall
-     as a card is wide. */
-  --deck-h:var(--cover-card);
+  /* Four of these five photographs are 16:9 and one is upright. A square mat
+     cropped the landscape ones to their middle third and then magnified what
+     was left, which is what made them look both over-zoomed and soft — the
+     browser was scaling a 480px file up past 760. A 3:2 print takes a sixth
+     off the sides instead, and asks far less of the file.
+     Border-box, so the mat and the hairline are inside the card's width. */
+  --print-ratio:1.5;
+  --print-w:calc(var(--cover-card) - var(--mat) * 2 - 2px);
+  --deck-h:calc(var(--print-w) / var(--print-ratio) + var(--mat) * 2 + 2px);
   --dwell:3400ms;
   /* The same gentler curve the filmstrip uses, for the same reason: the
      page's shared --ease leaves at speed and hauls up hard. */
@@ -874,7 +875,7 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
    is definite — so without this the print takes the photograph's own height
    and is clipped by the deck. */
 .cover__print img{
-  display:block;width:100%;height:auto;aspect-ratio:1/1;object-fit:cover;
+  display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;
   /* the same hairline the mat frame puts against its photograph */
   outline:1px solid var(--line);outline-offset:-1px}
 
@@ -952,7 +953,7 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 .cover.is-playing .cover__dwell i{animation-play-state:running}
 
 @media(max-width:620px){
-  .cover{--cover-card:clamp(190px,58vw,320px)}
+  .cover{--cover-card:clamp(240px,86vw,620px)}
   .cover__arrow{display:none}
   .cover__cap{min-height:6.4em}
 }
