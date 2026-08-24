@@ -474,6 +474,27 @@
     onMQ(MOBILE_Q, MT.kick);
   }
 
+  /* ========== SMOOTH ANCHORS ==========
+     scroll-behavior:smooth on <html> is gone. Chromium routes wheel and
+     keyboard scrolling through it too, so every notch was animated and a
+     quick flick kept travelling after the gesture stopped — which is what
+     made manual scrolling feel like it overshot. In-page links ask for smooth
+     explicitly instead, which is the only place it was ever wanted. */
+  document.addEventListener('click', function(e){
+    var a = e.target.closest && e.target.closest('a[href^="#"]');
+    if(!a) return;
+    var id = a.getAttribute('href').slice(1);
+    if(!id) return;
+    var target = document.getElementById(id);
+    if(!target) return;
+    e.preventDefault();
+    target.scrollIntoView({
+      behavior: REDUCED_Q.matches ? 'auto' : 'smooth',
+      block: 'start'
+    });
+    if(history.replaceState) history.replaceState(null, '', '#' + id);
+  });
+
   /* ========== MAGNETIC BUTTONS (desktop only) ========== */
   if(window.matchMedia('(hover:hover) and (pointer:fine)').matches){
     document.querySelectorAll('.magnetic').forEach(function(btn){

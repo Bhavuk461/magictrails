@@ -665,8 +665,8 @@
        made a click land as "centre this" instead of "open this". */
     frame.addEventListener('pointerdown', function(e){
       if(e.button) return;
-      drag = { id: e.pointerId, x: e.clientX, pos: pos, v: 0, t: e.timeStamp,
-               moved: 0, started: false };
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, pos: pos, v: 0,
+               t: e.timeStamp, moved: 0, started: false };
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', endDrag);
       window.addEventListener('pointercancel', endDrag);
@@ -679,7 +679,9 @@
       var dx = e.clientX - drag.x;
       drag.moved = Math.max(drag.moved, Math.abs(dx));
       if(!drag.started){
-        if(drag.moved <= 6) return;
+        /* A gesture that is mostly vertical belongs to the page, not the deck.
+           Without this a scroll that drifts sideways grabs the carousel. */
+        if(Math.abs(dx) <= 6 || Math.abs(dx) < Math.abs(e.clientY - drag.y)) return;
         /* Take over from wherever the tween had got to, not from where it began. */
         drag.started = true;
         stop();
@@ -985,8 +987,8 @@
        handler that opens a frame is delegated on the track. */
     stage.addEventListener('pointerdown', function(e){
       if(e.button || e.target.closest('a')) return;
-      drag = { id: e.pointerId, x: e.clientX, from: x, v: 0, t: e.timeStamp,
-               moved: 0, started: false };
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, from: x, v: 0,
+               t: e.timeStamp, moved: 0, started: false };
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', endDrag);
       window.addEventListener('pointercancel', endDrag);
@@ -997,7 +999,8 @@
       var dx = e.clientX - drag.x;
       drag.moved = Math.max(drag.moved, Math.abs(dx));
       if(!drag.started){
-        if(drag.moved <= 6) return;
+        /* A gesture that is mostly vertical belongs to the page, not the strip. */
+        if(Math.abs(dx) <= 6 || Math.abs(dx) < Math.abs(e.clientY - drag.y)) return;
         /* Only now does the transition come off, and the drag starts from
            wherever the track actually is rather than where it was headed. */
         drag.started = true;
@@ -1054,17 +1057,12 @@
       go(to, true);
     });
 
-    /* Horizontal intent only. Swallowing vertical wheel would turn a
-       full-bleed strip into a scroll trap on the way down the page. */
-    var wheelLock = 0;
-    stage.addEventListener('wheel', function(e){
-      if(Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 12) return;
-      if(e.timeStamp < wheelLock) return;
-      e.preventDefault();
-      wheelLock = e.timeStamp + 380;
-      handOver();
-      go(at + (e.deltaX > 0 ? 1 : -1));
-    }, { passive: false });
+    /* No wheel handler. Reading a horizontal trackpad swipe needs a
+       non-passive listener, and a non-passive wheel listener means the
+       compositor cannot scroll until this script has run — over a stage that
+       covers most of the viewport, that is felt on every scroll down the page.
+       Dragging, the arrows and the keyboard already move the strip; a stuttering
+       page is far too much to pay for one more way in. */
 
     /* ---- start ---- */
     copy(0, true);
