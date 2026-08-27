@@ -47,12 +47,23 @@ html[data-theme="bloom"]{
   --petal:#f2e7cf;
   --petal-edge:#d8caa6;
   --core:#c9953f;
-  /* Companions, taken off the Roopkund gallery photograph and muted so they
-     sit behind the text rather than competing with it. */
-  --bloom-rose:#9c3350;      /* Bistorta spikes */
-  --bloom-white:#fbf9f2;     /* Anaphalis rays */
-  --bloom-eye:#dcae4c;       /* Anaphalis centres */
-  --bloom-sage:#8fa86a;      /* fern */
+}
+
+/* ---- bloom: the same green ground, but the page is laid out over a flowered
+   field rather than beside a margin planting. The wrap is pulled in and the
+   gutter pushed out so a band of meadow runs down both sides of the reading
+   at every width, and the panels the reading sits on are defined here. ---- */
+html[data-theme="bloom"]{
+  --wrap:1080px;
+  --gutter:clamp(16px,6vw,104px);
+  --panel:#f8f1de;
+  --panel-edge:#e6dabc;
+  --panel-r:clamp(18px,2.4vw,30px);
+  --panel-p:clamp(22px,3.2vw,44px);
+  /* The ground reads warmer here: it is seen as soil between flowers rather
+     than as the page itself. */
+  --bg:#e9ecdb;
+  --bg-2:#dde3cd;
 }
 html[data-theme="verdant"] body,
 html[data-theme="bloom"] body{
@@ -61,6 +72,13 @@ html[data-theme="bloom"] body{
      the body’s own box, which on a phone is far taller than it is wide. */
   background-image:linear-gradient(180deg, #f4f6ea 0%, var(--bg) 34%, var(--bg-2) 100%);
 }
+
+/* styles.css pins the homepage ground to the viewport above 900px. Fixed
+   means the browser cannot scroll the ground with the page, so it repaints
+   the full viewport on every frame — measurable on a page this tall, and
+   pure waste here, where every theme paints a gradient that scrolls happily
+   with the document. */
+body{background-attachment:scroll}
 
 /* ---- nocturne: night. Warm amber accent keeps it recognisably MagicTrails
    rather than a generic blue dark mode. ---- */
@@ -124,8 +142,11 @@ body::after{
   background-image:var(--grain);background-size:160px 160px;
   opacity:.16;mix-blend-mode:multiply}
 html[data-theme="nocturne"] body::after{opacity:.22;mix-blend-mode:overlay}
-html[data-theme="verdant"] body::after,
-html[data-theme="bloom"] body::after{opacity:.14}
+html[data-theme="verdant"] body::after{opacity:.14}
+/* A multiplying layer has to re-blend everything beneath it, and beneath it
+   here is a field of a few thousand paths. The field is the tooth on this
+   theme; the paper grain is not needed as well. */
+html[data-theme="bloom"] body::after{display:none}
 #trek-root,.site-header,.site-footer,.bookbar{position:relative;z-index:1}
 
 .loading{min-height:60svh;display:flex;align-items:center;justify-content:center;
@@ -659,13 +680,11 @@ html[data-theme="nocturne"] .band{background:var(--bg-2)}
 .vine-leaf.is-alt .leaf-vein{stroke:var(--leaf,#6f8f56);stroke-opacity:.5}
 
 /* Content must always sit above the vines. */
-html[data-theme="verdant"] #trek-root > *,
-html[data-theme="bloom"] #trek-root > *{position:relative;z-index:1}
-/* ...but not the ambience layers themselves: the rule above would override
-   their position:absolute, collapse them to zero height and clip the whole
-   thing away, since overflow is hidden. Class beats universal here. */
-html[data-theme="verdant"] #trek-root > .vines,
-html[data-theme="bloom"] #trek-root > .blooms{position:absolute;z-index:0}
+html[data-theme="verdant"] #trek-root > *{position:relative;z-index:1}
+/* ...but not the ambience layer itself: the rule above would override its
+   position:absolute, collapse it to zero height and clip the whole thing
+   away, since overflow is hidden. Class beats universal here. */
+html[data-theme="verdant"] #trek-root > .vines{position:absolute;z-index:0}
 
 @media(max-width:900px){
   /* Narrow margins would put vines under the text, so only one side runs. */
@@ -724,105 +743,231 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   AMBIENCE — bloom (Roopkund)
-   Brahma Kamal, the flower that actually grows at this altitude and appears
-   in the trek's own gallery. Each plant draws its stem, then opens petal by
-   petal as you scroll past it.
+   AMBIENCE — bloom (Roopkund): the meadow
 
-   Everything is driven by (--grow - --at) like the vines: --grow is scroll
-   progress, --at is where that plant sits down the page, and each petal adds
-   a small offset of its own so the flower unfurls in sequence instead of
-   popping open all at once.
+   A flowered ground under the whole page, with the reading raised off it on
+   soft beige panels. Fourteen species on thirteen petal outlines — blue poppy,
+   crimson and rose geranium, white daisy, gold composite, Brahma Kamal,
+   vermilion cinquefoil, violet aster, cosmos, gentian, coral geum, dianthus,
+   buttercup, snow anemone — planted on a jittered grid at a pitch finer than
+   the heads themselves, so every flower laps over its neighbours: there is no
+   bare ground to see, and the overlaps are what give the field its depth.
+   Three ranks — back, middle, front — carry that depth, separated by value as
+   well as by size so that two heads crossing still read as two.
+
+   Everything opens off ONE number. `--p` is the page position of the bottom
+   edge of the screen and `--at` is where the plant stands, both in the field's
+   own coordinates; `--span` is a quarter of the viewport. So a plant is shut
+   as it appears at the foot of the screen, and fully open a quarter of a
+   screen higher — by the middle of the screen the field is always in flower.
+
+   Opening is a scale about the head's own centre, which is what makes it read
+   as petals expanding outward in a circle rather than a picture fading in; the
+   small counter-rotation that unwinds alongside it is the unfurling.
+
+   What a frame costs here is not the arithmetic. Dirtying the style of an SVG
+   element costs about 11 microseconds whether or not anything it holds
+   actually changes, so the whole cost is HOW MANY SVG NODES A FRAME
+   INVALIDATES — which is why the design is shaped the way it is:
+
+   ONE ELEMENT PER PLANT MOVES. Species, rank and depth sit on the group, not
+   on the rings inside it: fill, fill-opacity and color all inherit in SVG, so
+   one class dresses the whole head and the group is the only thing the scroll
+   touches. Driving the rings individually cost three times the restyle.
+
+   THE STRIPS ARE SHORT. A frame writes to every strip the opening band crosses,
+   so a strip taller than the band is nodes invalidated for nothing. At 70px a
+   strip the band covers barely more than itself.
+
+   AND THE NUMBERS ARE NOT @property-REGISTERED. It looks like the obvious win —
+   resolve each var() once as a number instead of re-parsing a token stream —
+   but a registered inherited property has to be recomputed and STORED on every
+   descendant when it changes, and there are three rings under every group.
+   Measured, it doubled the cost of a frame. Plain substitution is faster here.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-.blooms{
-  position:absolute;inset:0;z-index:0;pointer-events:none;
+.meadow{
+  position:absolute;left:0;right:0;z-index:0;pointer-events:none;
   overflow:hidden;
-  --grow:0}
-.blooms svg{position:absolute;top:0;height:100%;overflow:visible}
-.blooms .b-left{left:0}
-.blooms .b-right{right:0}
+  --span:180;
+  /* The bed. The planting is thick enough to close over it, but anywhere a
+     seam does open the eye should find more foliage underneath and never the
+     page: four dapples of green with a breath of colour through them. Free —
+     it is one paint, and it never changes.
 
-.bloom-stem{
-  fill:none;
-  stroke:var(--vine,#5d7a4a);
-  stroke-width:1.9;
-  stroke-linecap:round;
-  opacity:.5;
-  stroke-dasharray:1;
-  stroke-dashoffset:calc(1 - clamp(0, (var(--grow) - var(--at,0)) * 9, 1))}
+     Every dapple is centred in its own tile and fades out well inside it. A
+     blob placed off-centre is cut off by the edge of the tile it repeats in,
+     and a cut-off gradient tiles as a grid of hard rectangles — which is
+     exactly what showed through wherever the flowers left a gap. Sizes that
+     share no common factor, offset against each other, keep the centring from
+     reading as a dot grid. */
+  background-color:#dce5c8;
+  background-image:
+    radial-gradient(44% 40% at 50% 50%, rgba(101,150,66,.40), transparent 72%),
+    radial-gradient(42% 38% at 50% 50%, rgba(63,106,43,.34), transparent 72%),
+    radial-gradient(44% 40% at 50% 50%, rgba(146,182,104,.34), transparent 72%),
+    radial-gradient(40% 36% at 50% 50%, rgba(196,120,60,.10), transparent 70%);
+  background-size:521px 433px, 367px 311px, 691px 563px, 463px 389px;
+  background-position:0 0, 137px 91px, 61px 233px, 289px 47px}
 
-.bloom-leaf{
-  fill:var(--leaf,#6f8f56);
-  opacity:calc((var(--grow) - var(--at,0)) * 9);
-  transform:scale(clamp(0, (var(--grow) - var(--at,0)) * 7, 1));
-  transform-box:fill-box;transform-origin:0% 50%}
+/* One strip is one custom-property write per frame — and off screen, nothing
+   at all: content-visibility skips its style, layout and paint entirely. The
+   box is taller than the slice it holds because heads overhang it, and paint
+   containment would otherwise crop them at the seam. */
+.meadow__strip{
+  position:absolute;left:0;right:0;
+  content-visibility:auto;
+  contain-intrinsic-size:auto 190px}
+.meadow__strip>svg{display:block}
 
-/* Petals scale up from where they meet the heart of the flower. --d staggers
-   each one a little further along the scroll, which is what reads as opening
-   rather than appearing. */
-.bloom-petal{
-  fill:var(--petal,#f2e7cf);
-  stroke:var(--petal-edge,#d8caa6);
-  stroke-width:.8;
-  opacity:calc((var(--grow) - var(--at,0) - var(--d,0)) * 16);
-  transform:scale(clamp(0, (var(--grow) - var(--at,0) - var(--d,0)) * 11, 1));
-  transform-box:fill-box;transform-origin:50% 100%}
-.bloom-petal.is-inner{
-  fill:var(--surface,#f7f8ef);
-  stroke:none;
-  opacity:calc((var(--grow) - var(--at,0) - var(--d,0)) * 13)}
+/* How far this plant has opened, 0 → 1.
+   Placement is on `translate`, which is a property of its own and composes
+   with `transform` instead of being replaced by it — that is what lets one
+   element carry both where the plant stands and how far open it is.
 
-.bloom-core{
-  fill:var(--core,#c9953f);
-  opacity:calc((var(--grow) - var(--at,0) - .05) * 10);
-  transform:scale(clamp(0, (var(--grow) - var(--at,0) - .05) * 8, 1));
-  transform-box:fill-box;transform-origin:50% 50%}
+   The fallback for --p is wide open, not shut. Every strip is given a real
+   value in the same task that builds it, so it is never actually read — but
+   if the driver is ever a frame behind, a plant with no instructions should
+   be a flower, not a hole in the ground. */
+.meadow .fl,.meadow .lf{
+  --t:clamp(0, (var(--p,99999) - var(--at,0)) / var(--span,180), 1);
+  transform-box:view-box;transform-origin:0 0}
+/* A head scales about its own centre: petals expanding in a circle. Head and
+   clump alike are traced about the origin and then put in place by
+   `translate`, so that centre is simply 0,0 — no fill-box, and therefore no
+   bounding box to compute for every plant on every frame.
 
-/* Sway sits on its own element: it animates transform, so it cannot share an
-   element with the opening scale or with a static placement attribute. */
-.bloom-sway{
-  transform-box:fill-box;transform-origin:50% 100%;
-  animation:mtSway var(--sway,9s) ease-in-out var(--sway-delay,0s) infinite}
-/* Back rank reads as further away. Carried by .bloom-rank, which every plant
-   has, rather than .bloom-sway, which only the moving ones do. */
-.bloom-rank.is-back{opacity:.62}
+   No opacity ramp: a head at scale zero is already invisible, and a second
+   animated property would be a second thing to invalidate for nothing.
 
-/* Companions open as one group rather than petal by petal, which keeps the
-   number of scroll-driven restyles down while adding four species. */
-.bloom-open{
-  opacity:calc((var(--grow) - var(--at,0)) * 14);
-  transform:scale(clamp(0, (var(--grow) - var(--at,0)) * 10, 1));
-  transform-box:fill-box;transform-origin:50% 100%}
+   t(2-t) rather than t, so the head opens quickly and then settles into its
+   last tenth, the way a bud does. On a straight ramp the whole bottom quarter
+   of the screen is half-size flowers and the ground reads thin down there. */
+.meadow .fl{
+  transform:rotate(calc((var(--t) - 1) * 34deg))
+            scale(max(.0015, calc(var(--t) * (2 - var(--t)))))}
+/* Leaves only grow — a rotation on a clump of blades reads as a wobble. */
+.meadow .lf{transform:scale(max(.0015, calc(var(--t) * (2 - var(--t)))))}
 
-.bi-stem{fill:none;stroke:var(--vine,#5d7a4a);stroke-width:1.5;stroke-linecap:round;opacity:.75}
-.bi-spike{fill:var(--bloom-rose,#9c3350);opacity:.82}
-.bi-floret{fill:var(--bloom-rose,#9c3350);opacity:.5}
-.bi-leaf{fill:var(--leaf,#6f8f56);opacity:.7}
+/* ---- the palette ----
+   Red against green is the contrast the ground is built on, so the reds are
+   kept fully saturated and the greens muted underneath them. Depth is carried
+   by alpha alone: the ground shows through the back rank, which lightens and
+   desaturates it in one move — aerial perspective for free. */
+.meadow .is-back{fill-opacity:.66}
+.meadow .is-mid {fill-opacity:.9}
+/* Foliage is the floor, not a feature: one green, always muted, whatever rank
+   it was planted at — hence the extra weight to outrank the two above. */
+.meadow g.lf{fill:#5f8a41;fill-opacity:.76}
 
-.an-leaf{fill:var(--leaf,#6f8f56);opacity:.5}
-.an-ray{fill:var(--bloom-white,#fbf9f2);stroke:var(--petal-edge,#d8caa6);stroke-width:.35}
-.an-eye{fill:var(--bloom-eye,#dcae4c)}
+.s-poppy .pt{fill:#4a5fb4} .s-poppy .ct{fill:#e8a81c}
+.s-ruby  .pt{fill:#c2242f} .s-ruby  .pi{fill:#8e1622} .s-ruby  .ct{fill:#f0c344}
+.s-daisy .pt{fill:#fffdf6} .s-daisy .ct{fill:#dc9a16}
+.s-gold  .pt{fill:#e8a81c} .s-gold  .pi{fill:#f5cf58} .s-gold  .ct{fill:#8a5312}
+.s-rose  .pt{fill:#cc3d80} .s-rose  .pi{fill:#a02360} .s-rose  .ct{fill:#fbf3dd}
+.s-kamal .pt{fill:#fbf4de} .s-kamal .pi{fill:#fffdf6} .s-kamal .ct{fill:#d9a13a}
+.s-ember .pt{fill:#e2622a} .s-ember .pi{fill:#c23f16} .s-ember .ct{fill:#7d3a10}
+.s-aster .pt{fill:#7b4bb0} .s-aster .pi{fill:#5c3596} .s-aster .ct{fill:#f2c319}
+.s-cosmo .pt{fill:#f2a0bd} .s-cosmo .ct{fill:#e8a81c}
+.s-gentn .pt{fill:#2f57a8} .s-gentn .pi{fill:#1e3d85} .s-gentn .ct{fill:#fdf6e3}
+.s-geum  .pt{fill:#ef6f5c} .s-geum  .ct{fill:#8a2f1c}
+.s-pink  .pt{fill:#e0348a} .s-pink  .pi{fill:#ad1d68} .s-pink  .ct{fill:#fbf3dd}
+.s-buttr .pt{fill:#f6d21f} .s-buttr .ct{fill:#a8790c}
+.s-snow  .pt{fill:#ffffff} .s-snow  .pi{fill:#f7f9ef} .s-snow  .ct{fill:#9dbb63}
 
-.fn-rachis{fill:none;stroke:var(--bloom-sage,#8fa86a);stroke-width:1.3;stroke-linecap:round;opacity:.7}
-.fn-pinna{fill:var(--bloom-sage,#8fa86a);opacity:.62}
-@keyframes mtSway{
-  0%,100%{transform:rotate(-1.1deg)}
-  50%    {transform:rotate(1.1deg)}
-}
+/* The front rank carries a hairline of its own, so that where it laps over
+   the rank behind the two heads still part company. Faint enough to read as
+   the shadow the petal casts on what is under it, not as an outline. */
+.meadow .is-front .pt{stroke:rgba(52,38,18,.13);stroke-width:1}
 
-@media(max-width:900px){
-  /* Margins are too narrow for two columns of flowers next to the text. */
-  .blooms .b-right{display:none}
-  .bloom-stem{opacity:.34}
-  .bloom-petal{stroke-width:.6}
-}
+/* A hairline round the pale heads. On this ground a white flower would
+   otherwise dissolve into it — and where two pale heads lap over each other,
+   without an edge they read as one torn blot rather than two flowers. */
+.meadow .s-daisy .pt,.meadow .s-kamal .pt,
+.meadow .s-snow .pt,.meadow .s-cosmo .pt{
+  stroke:#bcb08c;stroke-width:.8;stroke-opacity:.8}
+/* A beaded ring of stamens, drawn as a dashed stroke rather than a node each.
+   Only on the front rank — further back it is noise at that size. The colour
+   is inherited from the head, so it costs no extra selector per species. */
+.meadow .is-front .ct{
+  stroke:currentColor;stroke-width:1.9;
+  stroke-dasharray:1.6 2.2;stroke-opacity:.55}
+.s-daisy,.s-buttr{color:#a86f0d}
+.s-poppy,.s-gold,.s-kamal,.s-aster,.s-cosmo{color:#7d4d0c}
+.s-ruby,.s-rose,.s-ember,.s-geum,.s-pink{color:#6d2413}
+.s-gentn,.s-snow{color:#4a6b28}
+
+/* Content sits above the field; the field itself keeps its own position, since
+   the rule above it would collapse the layer to nothing. */
+html[data-theme="bloom"] #trek-root > *{position:relative;z-index:1}
+html[data-theme="bloom"] #trek-root > .meadow{position:absolute;z-index:0}
 
 @media(prefers-reduced-motion:reduce){
-  .bloom-sway{animation:none}
-  .bloom-stem{stroke-dashoffset:0}
-  .bloom-petal,.bloom-core,.bloom-leaf{opacity:.9;transform:none}
-  .bloom-open{opacity:.85;transform:none}
+  /* No opening: the meadow is simply in flower. */
+  .meadow .fl,.meadow .lf{transform:none!important}
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BLOOM — the panels
+   Text is never set on the flowers. Every block of reading sits on a soft
+   beige card with a generous radius, and the ground is only ever seen around
+   and between them — which is also what keeps the field affordable, since
+   nothing is planted under a panel.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+html[data-theme="bloom"] .ledger__inner,
+html[data-theme="bloom"] .prose,
+html[data-theme="bloom"] .gallery,
+html[data-theme="bloom"] .band,
+html[data-theme="bloom"] .next__card,
+html[data-theme="bloom"] .next__index,
+html[data-theme="bloom"] .rail__card{
+  background:var(--panel);
+  border:1px solid var(--panel-edge);
+  border-radius:var(--panel-r);
+  box-shadow:0 1px 0 rgba(255,255,255,.7) inset, 0 22px 46px -34px rgba(30,42,22,.55)}
+
+html[data-theme="bloom"] .ledger__inner,
+html[data-theme="bloom"] .prose,
+html[data-theme="bloom"] .gallery,
+html[data-theme="bloom"] .next__index{padding:var(--panel-p)}
+
+/* .prose is measured in characters, so the panel has to be the measure plus
+   its own padding — otherwise the card stops short of the column it sits in. */
+html[data-theme="bloom"] .prose{
+  max-width:calc(var(--measure) + var(--panel-p) * 2)}
+
+/* The gallery carried the page gutter in its own padding; as a panel it needs
+   that gutter outside the card instead. */
+html[data-theme="bloom"] .gallery{
+  width:min(var(--wrap), 100% - var(--gutter) * 2);
+  max-width:none;
+  margin:0 auto clamp(56px,8vw,110px)}
+
+/* The band was full-bleed with a rule top and bottom. On this ground it reads
+   better as one more card laid on the meadow. */
+html[data-theme="bloom"] .band{
+  width:min(var(--wrap), 100% - var(--gutter) * 2);
+  margin:0 auto clamp(56px,8vw,110px);
+  overflow:hidden}
+html[data-theme="bloom"] .band__body{padding:clamp(30px,4.4vw,58px)}
+html[data-theme="bloom"] .next__card{overflow:hidden}
+
+/* Rules and hairlines inside a beige panel need to be warm, or they read as a
+   grey drawn on top of the paper rather than a crease in it. */
+html[data-theme="bloom"] .ledger__inner,
+html[data-theme="bloom"] .prose,
+html[data-theme="bloom"] .gallery,
+html[data-theme="bloom"] .band,
+html[data-theme="bloom"] .next__index,
+html[data-theme="bloom"] .rail__card{--line:#e3d8bd}
+
+@media(max-width:900px){
+  /* Narrow enough that a full-width card would leave no ground at all, so the
+     gutter comes right in and the meadow runs as a flowered edge down both
+     sides — with the real ground showing in the bands between the panels.
+     Set on the root rather than per section, so every panel lines up. */
+  html[data-theme="bloom"]{--gutter:clamp(14px,4.5vw,26px)}
 }
 
 
@@ -1213,7 +1358,6 @@ html.is-lite[data-theme="nocturne"] .site-header{background:rgba(11,16,32,.95)}
 html.is-lite .lightbox__ui button{backdrop-filter:none;background:rgba(24,19,12,.8)}
 /* feTurbulence + feDisplacementMap, re-rasterised on every resize. */
 html.is-lite .frame-deckle .shot__btn::before{filter:none;box-shadow:var(--shadow-sm)}
-html.is-lite .bloom-sway{animation:none}
 html.is-lite .strip__grain{display:none}
 html.is-lite .strip__hue{mix-blend-mode:normal;opacity:.42}
 html.is-lite .strip__plate,

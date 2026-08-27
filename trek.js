@@ -1237,7 +1237,7 @@
   }
 
   if(theme === 'verdant') buildVines();
-  if(theme === 'bloom') buildBlooms();
+  if(theme === 'bloom') buildMeadow();
   if(theme === 'nocturne') buildStars();
 
   /* --- verdant --- */
@@ -1333,231 +1333,369 @@
     }, '.vine-stem');
   }
 
-  /* --- bloom (Roopkund) ---
-     The planting is taken from the trek's own gallery photograph, which shows
-     Brahma Kamal standing over crimson Bistorta spikes, drifts of small white
-     Anaphalis daisies, and pale ferns. Those four make up the garden.
+  /* --- bloom (Roopkund): the meadow ---------------------------------------
+     A field, not a border. Flowers are planted across the whole page and the
+     reading sits on soft beige panels laid over them, so the ground can be
+     dense enough to have no gaps in it without ever fighting the text.
 
-     Node budget matters: everything driven by --grow restyles on every scroll
-     frame. So only Brahma Kamal, the feature flower, animates petal by petal;
-     the companions open as a single group each. Nesting is
-     placement (static attribute) > sway (CSS animation) > open (CSS transform),
-     because a CSS transform replaces an SVG transform attribute rather than
-     composing with it. */
-  function buildBlooms(){
+     Three things keep a field this size cheap on a page this tall.
+
+     Openness is read off the VIEWPORT, not off the page. A plant is shut at
+     the bottom edge of the screen and fully open a quarter of a screen above
+     it, so the only plants whose style can change on a given frame are the
+     ones inside that quarter - a ~180px window rather than the whole document.
+
+     The field is cut into absolutely-positioned strips. A frame writes one
+     custom property per live strip, and `content-visibility:auto` means a
+     strip that is off screen is not styled, laid out or painted at all.
+
+     A whole corolla is one <path>: every petal outline is traced once in a
+     unit space and rotated into place as it is written, so a flower costs two
+     or three nodes instead of one per petal. That is what pays for the count.
+
+     Nothing is planted under a panel either - the panels are measured and
+     their rectangles subtracted from the planting. */
+  function buildMeadow(){
     var layer = document.createElement('div');
-    layer.className = 'blooms';
+    layer.className = 'meadow';
     layer.setAttribute('aria-hidden', 'true');
     root.appendChild(layer);
 
     var seed = 90210;
-    function rnd(){
-      seed = (seed * 16807) % 2147483647;
-      return (seed - 1) / 2147483646;
-    }
-    function pick(a){ return a[Math.floor(rnd() * a.length)]; }
+    function rnd(){ seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
 
-    /* ---- shapes ---- */
+    /* ---- outlines ----
+       Base at the origin, tip at (0,-1), x is the half-width. Each entry is
+       one cubic: two control points and an end point. Thirteen outlines rather
+       than a handful, because at this density a repeated silhouette is the one
+       thing the eye picks out of a field immediately. */
+    var BROAD = [[-.60,-.20,-.66,-.86,0,-1],[.66,-.86,.60,-.20,0,0]];
+    var LANCE = [[-.26,-.30,-.18,-.80,0,-1],[.18,-.80,.26,-.30,0,0]];
+    /* notched, heart-shaped - geranium, primula */
+    var NOTCH = [[-.56,-.24,-.64,-.86,-.27,-.97],[-.12,-1.03,-.05,-.90,0,-.74],
+                 [.05,-.90,.12,-1.03,.27,-.97],[.64,-.86,.56,-.24,0,0]];
+    /* narrow at the waist, wide and round at the tip - the ray of a composite */
+    var SPOON = [[-.14,-.36,-.36,-.74,-.21,-.95],[-.09,-1.07,.09,-1.07,.21,-.95],
+                 [.36,-.74,.14,-.36,0,0]];
+    var HOOD  = [[-.38,-.28,-.46,-.78,0,-1.04],[.46,-.78,.38,-.28,0,0]];
+    /* drawn to a fine point, slightly waisted - aster, edelweiss */
+    var STAR  = [[-.22,-.44,-.08,-.80,0,-1.08],[.08,-.80,.22,-.44,0,0]];
+    /* wide, with a squared-off tip - cosmos */
+    var FAN   = [[-.32,-.30,-.54,-.86,-.44,-1.00],[-.16,-1.07,.16,-1.07,.44,-1.00],
+                 [.54,-.86,.32,-.30,0,0]];
+    /* a broad deltoid coming to a point - gentian, clematis */
+    var TRI   = [[-.44,-.30,-.31,-.74,0,-1.03],[.31,-.74,.44,-.30,0,0]];
+    /* three scallops across the tip - geum, pansy */
+    var LOBE  = [[-.50,-.26,-.57,-.78,-.34,-.86],[-.30,-1.00,-.15,-1.00,-.10,-.86],
+                 [-.06,-1.07,.06,-1.07,.10,-.86],[.15,-1.00,.30,-1.00,.34,-.86],
+                 [.57,-.78,.50,-.26,0,0]];
+    /* a fringed edge - dianthus */
+    var FRILL = [[-.44,-.28,-.57,-.78,-.36,-.88],[-.27,-.98,-.20,-.83,-.12,-.95],
+                 [-.04,-1.06,.04,-1.06,.12,-.95],[.20,-.83,.27,-.98,.36,-.88],
+                 [.57,-.78,.44,-.28,0,0]];
+    /* narrow at the foot, very round over the top - buttercup, cinquefoil */
+    var DROP  = [[-.28,-.24,-.72,-.62,-.40,-.93],[-.20,-1.07,.20,-1.07,.40,-.93],
+                 [.72,-.62,.28,-.24,0,0]];
+    var BLADE = [[-.26,-.34,-.32,-.78,-.07,-1.05],[.10,-.76,.20,-.34,0,0]];
+    var LEAF  = [[-.48,-.22,-.54,-.72,0,-1],[.54,-.72,.48,-.22,0,0]];
 
-    var PETAL = 'M0,0 C -6.5,-9 -6.5,-22 0,-31 C 6.5,-22 6.5,-9 0,0 Z';
-    var STRAP = 'M0,0 C7,-6 20,-8 30,-2 C20,8 7,7 0,0 Z';   /* broad rosette leaf */
-    var LANCE = 'M0,0 C5,-4 14,-6 21,-1 C14,5 5,5 0,0 Z';   /* narrow leaf */
-
-    /* Brahma Kamal: hooded cream bracts round a paler inner cup. */
-    function brahmaKamal(at){
-      var outer = 6, inner = 4, g = [], i, ang;
-      var lean = (rnd() - 0.5) * 12;
-      var len = 76 + rnd() * 26;
-
-      g.push('<path class="bloom-stem" pathLength="1" style="--at:' + at.toFixed(4) + '" ' +
-             'd="M0,0 C ' + (-lean) + ',' + (-len * 0.38) + ' ' + (lean * 1.4) + ',' +
-             (-len * 0.68) + ' ' + (lean * 0.4) + ',' + (-len) + '"/>');
-
-      /* strap leaves at the base, as in the photograph */
-      g.push('<g transform="translate(-2,-6) rotate(-18)"><path class="bloom-leaf" ' +
-             'style="--at:' + (at + 0.010).toFixed(4) + '" d="' + STRAP + '"/></g>');
-      g.push('<g transform="translate(2,-11) rotate(196)"><path class="bloom-leaf" ' +
-             'style="--at:' + (at + 0.018).toFixed(4) + '" d="' + STRAP + '"/></g>');
-
-      var head = [];
-      for(i = 0; i < outer; i++){
-        ang = (360 / outer) * i + rnd() * 6;
-        head.push('<g transform="rotate(' + ang.toFixed(1) + ')"><path class="bloom-petal" ' +
-          'style="--at:' + at.toFixed(4) + ';--d:' + (0.03 + i * 0.006).toFixed(4) +
-          '" d="' + PETAL + '"/></g>');
+    /* Everything is traced about the origin and the head is then translated
+       into place by its own <g>. Whole pixels, and two digits rather than five:
+       a head is thirty to ninety pixels across, so a rounded control point is
+       invisible, and this field is a great deal of path data before it is
+       anything else - what this saves is parse time on every visit. */
+    function trace(sh, cx, cy, ang, L, W){
+      var c = Math.cos(ang), s = Math.sin(ang), i, q;
+      function P(x, y){
+        var X = x * W, Y = y * L;
+        return Math.round(cx + X * c - Y * s) + ',' + Math.round(cy + X * s + Y * c);
       }
-      for(i = 0; i < inner; i++){
-        ang = (360 / inner) * i + 30;
-        head.push('<g transform="rotate(' + ang.toFixed(1) + ') scale(.6)">' +
-          '<path class="bloom-petal is-inner" style="--at:' + at.toFixed(4) +
-          ';--d:' + (0.055 + i * 0.005).toFixed(4) + '" d="' + PETAL + '"/></g>');
+      var d = 'M' + P(0, 0);
+      for(i = 0; i < sh.length; i++){
+        q = sh[i];
+        d += 'C' + P(q[0], q[1]) + ' ' + P(q[2], q[3]) + ' ' + P(q[4], q[5]);
       }
-      head.push('<circle class="bloom-core" style="--at:' + at.toFixed(4) + '" r="4.4"/>');
-
-      g.push('<g transform="translate(' + (lean * 0.4).toFixed(1) + ',' + (-len).toFixed(1) + ')">' +
-             head.join('') + '</g>');
-      return g.join('');
-    }
-
-    /* Bistorta: a slim crimson floret spike. Opens as one group. */
-    function bistorta(at){
-      var len = 46 + rnd() * 26;
-      var top = -len - (16 + rnd() * 10);
-      var lean = (rnd() - 0.5) * 9;
-      var g = '<path class="bi-stem" d="M0,0 C ' + (-lean) + ',' + (-len * 0.4) +
-              ' ' + lean + ',' + (-len * 0.75) + ' ' + (lean * 0.5) + ',' + (-len) + '"/>';
-      g += '<g transform="translate(' + (lean * 0.5).toFixed(1) + ',' + (-len).toFixed(1) + ')">' +
-             '<path class="bi-spike" d="M-3.1,0 C -4,' + ((top + len) * 0.45).toFixed(1) +
-             ' -3.3,' + ((top + len) * 0.85).toFixed(1) + ' 0,' + (top + len).toFixed(1) +
-             ' C 3.3,' + ((top + len) * 0.85).toFixed(1) + ' 4,' + ((top + len) * 0.45).toFixed(1) +
-             ' 3.1,0 Z"/>';
-      /* a few florets so the spike is not a flat silhouette */
-      for(var k = 0; k < 5; k++){
-        var fy = ((top + len) / 5) * (k + 0.5);
-        g += '<ellipse class="bi-floret" cx="' + ((k % 2 ? 1 : -1) * 1.1).toFixed(1) +
-             '" cy="' + fy.toFixed(1) + '" rx="1.5" ry="1.1"/>';
-      }
-      g += '</g>';
-      g += '<g transform="translate(0,-10) rotate(-24)"><path class="bi-leaf" d="' + LANCE + '"/></g>';
-      g += '<g transform="translate(1,-20) rotate(200)"><path class="bi-leaf" d="' + LANCE + '"/></g>';
-      return '<g class="bloom-open" style="--at:' + at.toFixed(4) + '">' + g + '</g>';
+      return d + 'Z';
     }
 
-    /* Anaphalis: a low drift of tiny white daisies over grey-green leaves. */
-    function anaphalis(at){
-      var n = 4 + Math.floor(rnd() * 3), g = '', i;
-      for(i = 0; i < 3; i++){
-        g += '<g transform="translate(' + ((rnd() - 0.5) * 16).toFixed(1) + ',-2) rotate(' +
-             (-60 + rnd() * 120).toFixed(0) + ') scale(.62)"><path class="an-leaf" d="' +
-             LANCE + '"/></g>';
-      }
+    /* One ring of petals, written as one path. The jitter on angle and length
+       is the whole difference between a flower and a cog. */
+    function ring(cx, cy, sh, n, r, w, phase){
+      var d = '', i;
       for(i = 0; i < n; i++){
-        var fx = (rnd() - 0.5) * 26;
-        var fy = -6 - rnd() * 18;
-        var r = 2 + rnd() * 0.9;
-        g += '<circle class="an-ray" cx="' + fx.toFixed(1) + '" cy="' + fy.toFixed(1) +
-             '" r="' + r.toFixed(1) + '"/>' +
-             '<circle class="an-eye" cx="' + fx.toFixed(1) + '" cy="' + fy.toFixed(1) +
-             '" r="' + (r * 0.42).toFixed(1) + '"/>';
+        d += trace(sh, cx, cy, (Math.PI * 2 / n) * i + phase + (rnd() - .5) * .13,
+                   r * (.9 + rnd() * .2), r * w);
       }
-      return '<g class="bloom-open" style="--at:' + at.toFixed(4) + '">' + g + '</g>';
+      return d;
     }
 
-    /* Fern: an arching rachis with pinnae stepping down its length. */
-    function fern(at, flip){
-      var len = 54 + rnd() * 26;
-      var dir = flip ? -1 : 1;
-      var g = '<path class="fn-rachis" d="M0,0 C ' + (10 * dir) + ',' + (-len * 0.45) +
-              ' ' + (16 * dir) + ',' + (-len * 0.78) + ' ' + (13 * dir) + ',' + (-len) + '"/>';
-      var n = 9;
-      for(var i = 0; i < n; i++){
-        var p = (i + 1) / (n + 1);
-        var px = (10 * dir) * p * 1.25;
-        var py = -len * p;
-        var s = (1 - p * 0.62) * 0.5;
-        g += '<g transform="translate(' + px.toFixed(1) + ',' + py.toFixed(1) + ') rotate(' +
-             ((flip ? 150 : 30) - p * 26).toFixed(0) + ') scale(' + s.toFixed(2) + ')">' +
-             '<path class="fn-pinna" d="' + LANCE + '"/></g>';
-        g += '<g transform="translate(' + px.toFixed(1) + ',' + py.toFixed(1) + ') rotate(' +
-             ((flip ? 210 : -30) + p * 26).toFixed(0) + ') scale(' + s.toFixed(2) + ')">' +
-             '<path class="fn-pinna" d="' + LANCE + '"/></g>';
+    /* ---- the species ----
+       Fourteen, on thirteen different petal outlines, so that in a field this
+       tightly packed a head almost never sits next to its own kind: the blue
+       poppy and crimson and rose geraniums of the first planting, the white
+       daisy, the gold composite, the trek's own Brahma Kamal and a vermilion
+       cinquefoil, and beside them a violet aster, a cosmos, a gentian, a
+       coral geum, a dianthus, a buttercup and a snow anemone.
+
+       `w` is petal half-width as a fraction of the head's radius, `eye` the
+       centre, `in` an inner ring set at half a step to the outer one. */
+    var SPECIES = [
+      { k:'poppy', sh:BROAD, n:4,  w:.95, eye:.22, in:0,   wt:7  },
+      { k:'ruby',  sh:NOTCH, n:5,  w:.90, eye:.17, in:.46, wt:9  },
+      { k:'daisy', sh:LANCE, n:12, w:.94, eye:.27, in:0,   wt:9  },
+      { k:'gold',  sh:SPOON, n:11, w:.86, eye:.30, in:.52, wt:8  },
+      { k:'rose',  sh:NOTCH, n:5,  w:1.0, eye:.16, in:.48, wt:8  },
+      { k:'kamal', sh:HOOD,  n:9,  w:.82, eye:.20, in:.56, wt:5  },
+      { k:'ember', sh:BROAD, n:6,  w:.82, eye:.19, in:0,   wt:7  },
+      { k:'aster', sh:STAR,  n:14, w:.92, eye:.25, in:.60, wt:8  },
+      { k:'cosmo', sh:FAN,   n:8,  w:.86, eye:.24, in:0,   wt:8  },
+      { k:'gentn', sh:TRI,   n:5,  w:.92, eye:.15, in:.42, wt:7  },
+      { k:'geum',  sh:LOBE,  n:6,  w:.88, eye:.21, in:0,   wt:7  },
+      { k:'pink',  sh:FRILL, n:5,  w:.94, eye:.16, in:.44, wt:7  },
+      { k:'buttr', sh:DROP,  n:5,  w:.92, eye:.20, in:0,   wt:8  },
+      { k:'snow',  sh:DROP,  n:7,  w:.80, eye:.22, in:.50, wt:6  }
+    ];
+    var BAG = [];
+    (function(){
+      for(var i = 0; i < SPECIES.length; i++){
+        for(var j = 0; j < SPECIES[i].wt; j++) BAG.push(SPECIES[i]);
       }
-      return '<g class="bloom-open" style="--at:' + at.toFixed(4) + '">' + g + '</g>';
+    })();
+
+    /* Three depths, weighted toward the two that carry the surface. Fullness
+       comes from the SIZE of the heads rather than from the number of them: a
+       middle or front head is wider than the grid step, so it laps over its
+       neighbours on every side and the field closes into one canopy. Getting
+       there by planting more, smaller heads instead costs several times the
+       markup for a thinner-looking result. */
+    var RANK = ['is-back', 'is-back', 'is-mid', 'is-mid', 'is-mid',
+                'is-front', 'is-front'];
+    var SIZE = { 'is-back': [.31, .16], 'is-mid': [.44, .22], 'is-front': [.56, .28] };
+
+    /* The head's rings and heart, drawn about the origin. Species and rank go
+       on the group that wraps them, not on each: fill, fill-opacity and color
+       all inherit in SVG, so one class on the parent dresses the whole head -
+       and, far more importantly, the parent is then the ONLY element the
+       scroll has to restyle. */
+    function flower(r, place){
+      var sp = BAG[(rnd() * BAG.length) | 0];
+      var out = '<path class="pt" d="' + ring(0, 0, sp.sh, sp.n, r, sp.w, rnd() * 6.28) + '"/>';
+      /* Under these sizes the second ring and the heart are a smudge of dark
+         pixels inside the head, so the head is better off without them. */
+      if(sp['in'] && r > 13){
+        out += '<path class="pi" d="' +
+               ring(0, 0, sp.sh, sp.n, r * sp['in'], sp.w,
+                    Math.PI / sp.n + rnd() * .4) + '"/>';
+      }
+      if(r > 9){
+        out += '<circle class="ct" r="' + Math.round(r * sp.eye) + '"/>';
+      }
+      return '<g class="fl s-' + sp.k + ' ' + place + '">' + out + '</g>';
     }
 
-    /* ---- placement ---- */
-
-    /* Static transform on the outer group, sway on the middle one, so neither
-       fights the CSS that animates opening. `back` pushes an item visually
-       further away: smaller, paler, nearer the outer edge. */
-    function place(inner, x, y, scale, back){
-      /* Only some plants sway. The animation runs every frame whether or not
-         you are scrolling, so swaying all hundred of them would burn the main
-         thread for no visual gain — a meadow where a few stems move and the
-         rest are still reads as natural anyway. */
-      var sways = !LITE && rnd() < (back ? 0.18 : 0.45);
-      return { y: y, m:
-        '<g transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) +
-          ') scale(' + scale.toFixed(3) + ')">' +
-          '<g class="bloom-rank' + (back ? ' is-back' : '') +
-            (sways ? ' bloom-sway' : '') +
-            '" style="--sway:' + (7 + rnd() * 5).toFixed(1) + 's;--sway-delay:-' +
-            (rnd() * 7).toFixed(1) + 's">' + inner + '</g>' +
-        '</g>' };
+    /* Foliage is the floor of the field, not a feature of it: enough green to
+       close the last gaps between heads, planted deepest of all so the flowers
+       lap over it, and only under a third of them - the canopy is meant to be
+       flowers, and every blade that shows is one the canopy failed to cover. */
+    function clump(cx, cy, size){
+      var d = '', n = 2 + (rnd() * 3 | 0), i;
+      for(i = 0; i < n; i++){
+        var wide = rnd() < .55;
+        d += trace(wide ? LEAF : BLADE,
+                   cx + (rnd() - .5) * size * .5, cy + rnd() * size * .1,
+                   (rnd() - .5) * 2.4,
+                   size * (.42 + rnd() * .5), size * (wide ? .3 : .13));
+      }
+      return d;
     }
 
-    function garden(height, side, W){
-      var flip = side === 'right';
-      var mid = W / 2;
-      var parts = [];
+    /* ---- planting ----
+       A jittered grid rather than free scatter: the grid is what guarantees
+       there is no hole anywhere, the jitter is what stops it reading as one.
+       Depth is painter's order, so an item's rank is also its sort key.
 
-      /* Organic rhythm rather than a fixed pitch: scenes of mixed species with
-         varied gaps, so the column reads as a meadow edge and not a row. */
-      var y = height * 0.06;
-      var guard = 0;
-      /* Wider gaps between scenes on a weak device: the same meadow, thinned,
-         rather than a different design. */
-      var pitch = 1 / DENSITY;
-      while(y < height * 0.99 && guard++ < 80){
-        var at = Math.min(0.8, (y / height) * 0.8);
-        var scene = pick(['feature', 'feature', 'spikes', 'drift', 'ferny']);
-        var inward = flip ? -1 : 1;
+       Short strips: a frame writes to every strip the opening band crosses, so
+       a strip much taller than that band is nodes invalidated for nothing. At
+       70px the band covers barely more than itself. */
+    var STRIP = 70;
+    var PAD = 60;                          /* heads overhang their own strip */
+    var Z = { leaf: 0, 'is-back': 1, 'is-mid': 2, 'is-front': 3 };
 
-        if(scene === 'feature'){
-          /* a Brahma Kamal with companions gathered at its foot */
-          parts.push(place(brahmaKamal(at), mid + inward * (rnd() * 8),
-                           y, 0.86 + rnd() * 0.4, false));
-          parts.push(place(anaphalis(at + 0.012), mid - inward * (16 + rnd() * 12),
-                           y + 4 + rnd() * 8, 0.8 + rnd() * 0.3, true));
-          if(rnd() < 0.6){
-            parts.push(place(bistorta(at + 0.008), mid + inward * (20 + rnd() * 12),
-                             y - 2, 0.7 + rnd() * 0.25, true));
+    function covered(bl, x, y){
+      for(var i = 0; i < bl.length; i++){
+        var b = bl[i];
+        if(x > b[0] && x < b[2] && y > b[1] && y < b[3]) return true;
+      }
+      return false;
+    }
+
+    function field(W, H, bl){
+      /* Finer on a phone: the panels take nearly the whole width there, so
+         what is left of the ground is a narrow edge and it has to be thick
+         with flowers to read as a meadow rather than as a stray border. */
+      var cell = LITE ? 84 : (W < 700 ? 50 : 55);
+      var cols = Math.max(2, Math.round(W / cell));
+      var step = W / cols;
+      var rows = Math.ceil(H / step);
+      var rack = [], i, r, c;
+
+      function put(y, z, m){
+        var s = (y / STRIP) | 0;
+        (rack[s] || (rack[s] = [])).push({ z: Z[z], m: m });
+      }
+
+      for(r = 0; r < rows; r++){
+        for(c = 0; c < cols; c++){
+          /* Enough jitter to break the rows, not so much that cells swap
+             places and leave a hole where one of them was. */
+          var x = (c + .5) * step + (rnd() - .5) * step * .72;
+          var y = (r + .5) * step + (rnd() - .5) * step * .72;
+          if(y < 0 || y > H) continue;
+          if(covered(bl, x, y)) continue;
+
+          var rank = RANK[(rnd() * RANK.length) | 0];
+          var sz = SIZE[rank];
+          var head = step * (sz[0] + rnd() * sz[1]);
+
+          /* The tail of one class attribute and the whole style attribute,
+             shared by the head and its leaves. Placement rides on the
+             `translate` PROPERTY rather than on a transform attribute: an SVG
+             transform attribute would be replaced outright by the transform the
+             stylesheet animates, whereas `translate` is a property of its own
+             and the two compose. That is what lets a single element carry both
+             where the plant stands and how far open it is — and one element per
+             plant is the whole performance story on this page. */
+          var place = rank + '" style="--at:' + y.toFixed(0) + ';translate:' +
+                      Math.round(x) + 'px ' + Math.round(y) + 'px';
+          if(rnd() < .22){
+            put(y, 'leaf', '<g class="lf ' + place + '"><path d="' +
+                  clump(0, head * .5, step * (.55 + rnd() * .45)) + '"/></g>');
           }
-          y += (300 + rnd() * 120) * pitch;
-
-        } else if(scene === 'spikes'){
-          var k = 2 + Math.floor(rnd() * 2);
-          for(var i = 0; i < k; i++){
-            parts.push(place(bistorta(at + i * 0.006),
-                             mid + (rnd() - 0.5) * (W * 0.42),
-                             y + i * (8 + rnd() * 10),
-                             0.78 + rnd() * 0.4, i > 0));
-          }
-          parts.push(place(anaphalis(at + 0.014), mid + (rnd() - 0.5) * (W * 0.4),
-                           y + 14 + rnd() * 10, 0.75 + rnd() * 0.3, true));
-          y += (205 + rnd() * 95) * pitch;
-
-        } else if(scene === 'drift'){
-          var m = 2 + Math.floor(rnd() * 2);
-          for(var j = 0; j < m; j++){
-            parts.push(place(anaphalis(at + j * 0.005),
-                             mid + (rnd() - 0.5) * (W * 0.5),
-                             y + j * (10 + rnd() * 12),
-                             0.72 + rnd() * 0.4, j % 2 === 1));
-          }
-          y += (195 + rnd() * 85) * pitch;
-
-        } else {
-          parts.push(place(fern(at, flip), mid + inward * (rnd() * 14),
-                           y, 0.8 + rnd() * 0.4, false));
-          if(rnd() < 0.7){
-            parts.push(place(anaphalis(at + 0.01), mid - inward * (14 + rnd() * 14),
-                             y + 6, 0.7 + rnd() * 0.3, true));
-          }
-          y += (215 + rnd() * 95) * pitch;
+          put(y, rank, flower(head, place));
         }
       }
 
-      return '<svg class="b-' + side + '" width="' + W + '" height="' + height + '" ' +
-               'viewBox="0 0 ' + W + ' ' + height + '" fill="none" aria-hidden="true">' +
-               bandWrap(parts, height, BAND) +
-             '</svg>';
+      var html = '';
+      for(i = 0; i < rack.length; i++){
+        var g = rack[i];
+        if(!g || !g.length) continue;
+        /* Sorting inside the strip keeps the sort local and the strips intact. */
+        g.sort(function(a, b){ return a.z - b.z; });
+        var y0 = i * STRIP, y1 = Math.min(H, y0 + STRIP);
+        var top = y0 - PAD, h = (y1 - y0) + PAD * 2;
+        var body = '';
+        for(var j = 0; j < g.length; j++) body += g[j].m;
+        html += '<div class="meadow__strip" data-y0="' + y0 + '" data-y1="' + y1 +
+                  '" style="top:' + top + 'px;height:' + h + 'px">' +
+                  '<svg width="' + W + '" height="' + h + '" viewBox="0 ' + top +
+                    ' ' + W + ' ' + h + '" fill="none">' + body + '</svg>' +
+                '</div>';
+      }
+      return html;
     }
 
-    ambience(layer, function(h, W){
-      seed = 90210;                       /* same garden after a resize */
-      return garden(h, 'left', W) + (ONE_COLUMN() ? '' : garden(h, 'right', W));
-    }, null);
+    /* ---- the panels the field must not be planted under ----
+       Inset, so heads still come up behind a panel's edge and are cropped by
+       it rather than stopping short of it. */
+    var PANELS = '.ledger__inner,.prose,.gallery,.band,.next__card,.next__index';
+    var INSET = 38;
+
+    function blocks(top){
+      var base = root.getBoundingClientRect().top + window.pageYOffset + top;
+      var els = root.querySelectorAll(PANELS), out = [], i;
+      for(i = 0; i < els.length; i++){
+        var q = els[i].getBoundingClientRect();
+        var x0 = q.left + INSET, x1 = q.right - INSET;
+        var y0 = q.top + window.pageYOffset - base + INSET;
+        var y1 = y0 + q.height - INSET * 2;
+        if(x1 > x0 && y1 > y0) out.push([x0, y0, x1, y1]);
+      }
+      return out;
+    }
+
+    /* ---- the driver ----
+       `--p` is the page position of the bottom edge of the screen in field
+       coordinates, `--at` is where the plant stands, and the stylesheet turns
+       the difference between them into how far open the plant is. Strips above
+       the line are parked open and strips below it parked shut, once each, so
+       a frame only ever writes to the two or three strips crossing it. */
+    var strips = [], fieldTop = 0, lastKey = null;
+
+    function collect(){
+      strips = [];
+      var els = layer.querySelectorAll('.meadow__strip'), i;
+      for(i = 0; i < els.length; i++){
+        strips.push({ el: els[i], y0: +els[i].dataset.y0, y1: +els[i].dataset.y1, state: '' });
+      }
+      lastKey = null;
+    }
+
+    function update(y){
+      var span = Math.max(140, window.innerHeight * .25);
+      var p = Math.round(y + window.innerHeight - fieldTop);
+      if(p === lastKey) return;
+      lastKey = p;
+      var shut = p - span, i, s;
+      for(i = 0; i < strips.length; i++){
+        s = strips[i];
+        if(s.y1 < shut){
+          if(s.state !== 'open'){ s.el.style.setProperty('--p', '99999'); s.state = 'open'; }
+        } else if(s.y0 > p){
+          if(s.state !== 'shut'){ s.el.style.setProperty('--p', '-99999'); s.state = 'shut'; }
+        } else {
+          s.el.style.setProperty('--p', p);
+          s.state = 'live';
+        }
+      }
+    }
+
+    function openAll(){
+      lastKey = null;
+      for(var i = 0; i < strips.length; i++){
+        strips[i].el.style.setProperty('--p', '99999');
+        strips[i].state = 'open';
+      }
+    }
+
+    /* ---- build ---- */
+    var lastW = -1, lastH = -1;
+
+    function rebuild(force){
+      var hero = root.querySelector('.hero-full, .hero-journal');
+      var top = hero ? hero.offsetHeight : 0;
+      var W = root.clientWidth;
+      var H = root.offsetHeight - top;
+      if(W < 40 || H < 40) return;
+      /* Rebuilding is thousands of nodes, so ignore the reflow an image or a
+         sticky rail causes and only redraw on a real change of size. */
+      if(!force && W === lastW && Math.abs(H - lastH) < 48) return;
+      lastW = W; lastH = H;
+
+      layer.style.top = top + 'px';
+      layer.style.height = H + 'px';
+      layer.style.setProperty('--span', Math.max(140, window.innerHeight * .25).toFixed(0));
+
+      seed = 90210;                        /* the same meadow on every visit */
+      layer.innerHTML = field(W, H, blocks(top));
+      collect();
+      fieldTop = root.getBoundingClientRect().top + window.pageYOffset + top;
+
+      if(REDUCED.matches) openAll();
+      else update(window.pageYOffset);
+    }
+
+    rebuild(true);
+    if(!REDUCED.matches) MT.onScroll(update);
+
+    var rt;
+    window.addEventListener('resize', function(){
+      clearTimeout(rt);
+      rt = setTimeout(function(){ rebuild(); }, 180);
+    }, { passive: true });
+    /* Images landing move everything below them, so redraw once they settle —
+       but only if they actually did. Forcing it here rebuilt, and re-parsed,
+       the whole field a second time on every visit. */
+    window.addEventListener('load', function(){ rebuild(); });
   }
 
   /* --- nocturne --- */
