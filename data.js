@@ -2,9 +2,9 @@
 // `theme` selects the trek-page treatment, all defined in trek.css:
 //   journal  - printed field-journal on paper
 //   verdant  - beige-green, with leaf vines that grow as you scroll
-//   bloom    - a meadow of overlapping flowers under the whole page, opening
-//              as it crosses the bottom quarter of the screen, with the
-//              reading raised off it on soft beige panels
+//   bloom    - a photograph of the trail as a fixed ground (a wide plate and a
+//              tall one, swapped by media query), with the reading raised off
+//              it on soft beige panels
 //   nocturne - night sky with a drifting starfield
 //
 // `galleryStyle` picks how the photographs are presented:

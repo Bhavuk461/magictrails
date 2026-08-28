@@ -41,7 +41,7 @@ TREK_FOLDERS = [
 ]
 ROOT_IMAGES = ["hero.webp"]
 
-FULLBLEED_STEMS = {"back", "title", "hero"}
+FULLBLEED_STEMS = {"back", "title", "hero", "ground-wide", "ground-tall"}
 
 
 def autocrop_letterbox(im):
@@ -120,6 +120,21 @@ def build_one(src, out_dir, force=False):
             im.resize((w, h), Image.LANCZOS).save(
                 out_path, "WEBP", quality=quality, method=METHOD
             )
+
+        # A full-bleed plate is stretched edge to edge, so serving it below its
+        # own resolution is visible softness. When the source falls between two
+        # steps - or under the top one - it also gets a variant at its native
+        # width, capped at the widest step so a huge original is still bounded.
+        if stem in FULLBLEED_STEMS:
+            native = min(src_w, widths_for(stem)[-1])
+            if native not in made:
+                out_path = os.path.join(out_dir, variant_name(stem, native))
+                made.append(native)
+                if not os.path.exists(out_path) or force:
+                    h = max(1, round(native * ratio))
+                    im.resize((native, h), Image.LANCZOS).save(
+                        out_path, "WEBP", quality=quality, method=METHOD
+                    )
 
         # A source smaller than the narrowest step still needs one usable variant.
         if not made:

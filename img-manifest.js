@@ -48,7 +48,8 @@ window.MT_IMAGES = {
   "w": 1179,
   "widths": [
    480,
-   960
+   960,
+   1179
   ]
  },
  "Buran ghati/title.webp": {
@@ -137,7 +138,8 @@ window.MT_IMAGES = {
   "widths": [
    480,
    960,
-   1440
+   1440,
+   1877
   ]
  },
  "Kuari pass trek/IMG_0019_Original.webp": {
@@ -251,6 +253,27 @@ window.MT_IMAGES = {
    960,
    1440,
    1920
+  ]
+ },
+ "Roopkund trek/ground-tall.jpg": {
+  "dir": "img/roopkund-trek",
+  "h": 1131,
+  "stem": "ground-tall",
+  "w": 735,
+  "widths": [
+   480,
+   735
+  ]
+ },
+ "Roopkund trek/ground-wide.jpg": {
+  "dir": "img/roopkund-trek",
+  "h": 900,
+  "stem": "ground-wide",
+  "w": 1200,
+  "widths": [
+   480,
+   960,
+   1200
   ]
  },
  "Roopkund trek/title.webp": {
