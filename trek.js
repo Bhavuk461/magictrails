@@ -1080,8 +1080,8 @@
      silenced by prefers-reduced-motion; the margin-hugging one drops to a
      single column on narrow screens where two would sit under the text.
 
-     bloom has no ambience of its own any more: its ground is a photograph,
-     laid down by the stylesheet alone. */
+     bloom's ground is a photograph rather than a planting, but it still has
+     to be driven: it drifts upward as you scroll. See buildGround. */
 
   /* How much clear space sits between the viewport edge and the text column.
      The ambience is drawn into that gutter; sizing it by measurement rather
@@ -1239,6 +1239,7 @@
   }
 
   if(theme === 'verdant') buildVines();
+  if(theme === 'bloom') buildGround();
   if(theme === 'nocturne') buildStars();
 
   /* --- verdant --- */
@@ -1332,6 +1333,64 @@
     ambience(layer, function(h, W){
       return vine(h, 'left', W) + (ONE_COLUMN() ? '' : vine(h, 'right', W));
     }, '.vine-stem');
+  }
+
+  /* --- bloom (Roopkund): the photographic ground ---
+     A layer taller than the viewport, drifting upward as the page scrolls so
+     that the foot of the photograph arrives exactly as the page ends.
+
+     Why it drifts rather than simply staying put: on a phone the browser
+     chrome hides and shows as you scroll, which changes the viewport height,
+     which resizes an inset:0 fixed layer, which re-runs background-size:cover
+     - and that re-scale on the way past is the jitter. This layer is sized in
+     lvh, which the chrome cannot change, and it moves by transform alone,
+     which the compositor can do without touching layout or paint.
+
+     The veil is NOT in here. It belongs to the screen, not to the picture: it
+     darkens the top of the frame so a translucent header stays legible, and if
+     it travelled with the photograph that shading would slide away. It lives
+     on body::after, which does not move. */
+  function buildGround(){
+    var el = document.createElement('div');
+    el.className = 'ground';
+    el.setAttribute('aria-hidden', 'true');
+    document.body.insertBefore(el, document.body.firstChild);
+
+    var travel = 0, span = 1, last = null;
+
+    /* Measured, never recomputed per frame: a getBoundingClientRect or a
+       scrollHeight read inside the scroll frame forces layout, and this one
+       would do it behind every other subscriber's write. */
+    function measure(){
+      /* The layer's own height rather than a vh sum of our own - the
+         stylesheet sets it in lvh and the two must not drift apart. */
+      travel = Math.max(0, el.offsetHeight - window.innerHeight);
+      span = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      last = null;
+    }
+
+    function update(y){
+      var p = clamp(y / span, 0, 1);
+      var ty = Math.round(-p * travel);
+      if(ty === last) return;
+      last = ty;
+      el.style.transform = 'translate3d(0,' + ty + 'px,0)';
+    }
+
+    measure();
+    if(REDUCED.matches) el.style.transform = 'none';
+    else MT.onScroll(update);
+
+    function refresh(){ measure(); if(!REDUCED.matches) update(window.pageYOffset); }
+
+    var rt;
+    window.addEventListener('resize', function(){
+      clearTimeout(rt);
+      rt = setTimeout(refresh, 150);
+    }, { passive: true });
+    /* Images landing change the page height, and the page height is the whole
+       mapping - the drift has to be remeasured or it finishes early. */
+    window.addEventListener('load', refresh);
   }
 
   /* --- nocturne --- */

@@ -144,10 +144,10 @@ body::after{
   opacity:.16;mix-blend-mode:multiply}
 html[data-theme="nocturne"] body::after{opacity:.22;mix-blend-mode:overlay}
 html[data-theme="verdant"] body::after{opacity:.14}
-/* Paper tooth over a photograph is a mismatch — and a multiplying layer has
-   to re-blend the whole viewport as the page moves under it, which is exactly
-   the cost a full-bleed picture must not add to. */
-html[data-theme="bloom"] body::after{display:none}
+/* bloom has no grain: paper tooth over a photograph is a mismatch, and a
+   multiplying layer has to re-blend the whole viewport as the page moves under
+   it. It spends this slot on the veil over its photograph instead — see the
+   GROUND section below. */
 #trek-root,.site-header,.site-footer,.bookbar{position:relative;z-index:1}
 
 .loading{min-height:60svh;display:flex;align-items:center;justify-content:center;
@@ -753,65 +753,75 @@ html.is-lite .sky__star{animation:none;opacity:var(--max,.7)}
    peaks. Cropping one landscape photograph to portrait would have thrown away
    the range that makes it.
 
-   A FIXED LAYER, not background-attachment:fixed on the body. A fixed
-   attachment makes the browser repaint the whole viewport on every scroll
-   frame — the cost this page was carrying before, and the one thing a
-   full-bleed photograph must not reintroduce. A fixed element is composited
-   once and then simply stays put while the page travels over it.
+   IT DRIFTS. The layer is taller than the viewport, and trek.js walks it
+   upward in step with the page so the foot of the photograph arrives exactly
+   as the page ends — a whole document's worth of scroll for one screen's worth
+   of picture, which is slow enough to read as depth rather than as motion.
 
-   The veil rides in the same layer as a second background, so the whole ground
-   is still one paint. It is heaviest at the very top, where a translucent
-   header has to stay legible, and at the foot; across the middle it is almost
-   nothing, because that is where the picture is worth seeing.
+   Standing still was the first attempt and it jittered on a phone. A phone
+   hides and shows its browser chrome as you scroll; that changes the viewport
+   height; that resizes an inset:0 fixed layer; and that re-runs
+   background-size:cover on every change. The re-scale is the jitter. So the
+   height here is in lvh — the LARGE viewport height, the one the chrome cannot
+   change — and the layer moves by transform alone, which the compositor
+   handles without touching layout or paint.
+
+   Never background-attachment:fixed, which makes the browser repaint the whole
+   viewport every scroll frame. This page was carrying that cost until 26 Aug
+   and a full-bleed photograph is the last thing that should bring it back.
 
    Only the plate whose media query matches is fetched, so a phone never
    downloads the wide plate and a laptop never downloads the tall one.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-html[data-theme="bloom"] body::before{
-  content:'';
-  position:fixed;inset:0;
-  /* styles.css parks this layer at -1 below 900px, which would put it behind
-     the body's own background and hide the photograph outright. */
-  z-index:0;
+.ground{
+  position:fixed;left:0;right:0;top:0;
+  /* Overscan: how much taller than the screen, and so how far it can travel.
+     Held back on a narrow screen because the tall plate is only 735px wide —
+     every extra unit of height is another slice cropped off its sides. */
+  height:145vh;
+  height:145lvh;
+  z-index:0;pointer-events:none;
+  will-change:transform;
+  background-image:url("img/roopkund-trek/ground-wide-1200.webp");
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat}
+
+/* The veil, on a layer that does not travel: it shades the top of the SCREEN
+   so the translucent header stays legible, and the foot of it, and leaves the
+   middle almost clear where the picture is worth seeing. Riding along with the
+   photograph, that shading would slide off the top within a screen of scroll.
+   This slot is the paper grain on the other three themes; paper tooth over a
+   photograph is a mismatch, so bloom spends it on this instead. */
+html[data-theme="bloom"] body::after{
   display:block;
-  pointer-events:none;
-  background-image:
-    linear-gradient(180deg,
-      rgba(18,28,16,.46) 0%,
-      rgba(18,28,16,.17) 17%,
-      rgba(26,36,22,.09) 50%,
-      rgba(18,28,16,.21) 84%,
-      rgba(14,22,12,.40) 100%),
-    url("img/roopkund-trek/ground-wide-1200.webp");
-  background-size:auto, cover;
-  background-position:center, center 42%;
-  background-repeat:no-repeat, no-repeat}
+  position:fixed;inset:0;z-index:0;
+  opacity:1;mix-blend-mode:normal;
+  background-image:linear-gradient(180deg,
+    rgba(18,28,16,.46) 0%,
+    rgba(18,28,16,.17) 17%,
+    rgba(26,36,22,.09) 50%,
+    rgba(18,28,16,.21) 84%,
+    rgba(14,22,12,.40) 100%);
+  background-size:auto}
 
 @media(max-width:900px){
-  html[data-theme="bloom"] body::before{
-    background-image:
-      linear-gradient(180deg,
-        rgba(18,28,16,.46) 0%,
-        rgba(18,28,16,.17) 17%,
-        rgba(26,36,22,.09) 50%,
-        rgba(18,28,16,.21) 84%,
-        rgba(14,22,12,.40) 100%),
-      url("img/roopkund-trek/ground-tall-735.webp");
-    background-position:center, center}
+  .ground{
+    height:124vh;
+    height:124lvh;
+    background-image:url("img/roopkund-trek/ground-tall-735.webp")}
 }
 /* A small phone gets the half-size plate: at that width it is indistinguishable
    and it is 88KB rather than 168KB. */
 @media(max-width:430px){
-  html[data-theme="bloom"] body::before{
-    background-image:
-      linear-gradient(180deg,
-        rgba(18,28,16,.46) 0%,
-        rgba(18,28,16,.17) 17%,
-        rgba(26,36,22,.09) 50%,
-        rgba(18,28,16,.21) 84%,
-        rgba(14,22,12,.40) 100%),
-      url("img/roopkund-trek/ground-tall-480.webp")}
+  .ground{background-image:url("img/roopkund-trek/ground-tall-480.webp")}
+}
+
+@media(prefers-reduced-motion:reduce){
+  /* trek.js leaves the layer parked at the top; the overscan then only ever
+     shows its upper edge, so there is nothing to drift and nothing to jitter. */
+  .ground{will-change:auto}
 }
 
 /* The footer is the one piece of reading with no panel under it, and on this

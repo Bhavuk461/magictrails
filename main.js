@@ -105,74 +105,60 @@
     renderedMobile = wantMobile;
     track.innerHTML = '';
     track.className = 'cine-slider__track';
-    if(wantMobile) buildCarousel();
+    if(wantMobile) buildStack();
     else buildSlider();
   }
 
-  /* ---------- mobile: swipeable card carousel ---------- */
-  function buildCarousel(){
-    var treks = window.TREKS;
-    var wrap = document.createElement('div');
-    wrap.className = 'mt-carousel';
+  /* ---------- mobile: every trail on screen at once ----------
+     This replaced a swipeable rail of 78vw cards. The rail held one card in
+     view and the other three off the side of the screen, which meant three of
+     the four trails were unnamed until you thought to swipe — the trails are
+     the point of the page, so none of them should need finding.
 
-    var cards = treks.map(function(t, i){
+     Four bands instead, each the photograph with the name over it, and the
+     band height derived from the viewport so that all four and the heading
+     fit one screen without scrolling. Read the height in the stylesheet: it is
+     (screen - chrome) / 4, so this stays true on a small phone as well. */
+  function buildStack(){
+    var bands = window.TREKS.map(function(t, i){
       var media = MT.img(t.folder + '/back.webp', {
-        alt: t.name,
-        sizes: '(max-width:460px) 78vw, 340px',
-        loading: i === 0 ? 'eager' : 'lazy'
+        /* Decorative: the name is right beside it in real text. */
+        alt: '',
+        sizes: '100vw',
+        /* The section sits directly under a full-screen hero, so the first two
+           are within a flick of the fold and the last two are not. */
+        loading: i < 2 ? 'eager' : 'lazy'
       });
-      return '<a class="mt-card" href="trek.html?t=' + encodeURIComponent(t.slug) + '" ' +
-               'aria-label="' + MT.esc(t.name + ', ' + t.grade + ', ' + t.price) + '">' +
-          '<span class="mt-card__media">' + media +
-            '<span class="mt-card__grade">' + t.grade + '</span>' +
-            '<span class="mt-card__alt">' + t.altitude + '</span>' +
-          '</span>' +
-          '<span class="mt-card__body">' +
-            '<h3 class="mt-card__name">' + t.name + '</h3>' +
-            '<span class="mt-card__tag">' + t.tagline + '</span>' +
-            '<span class="mt-card__foot">' +
-              '<span class="mt-card__price">' + t.price + '<small>' + t.duration + '</small></span>' +
-              '<span class="mt-card__cta">View trek →</span>' +
+      return '<li class="tband">' +
+          '<a class="tband__a" href="trek.html?t=' + encodeURIComponent(t.slug) + '">' +
+            '<span class="tband__media">' + media + '</span>' +
+            '<span class="tband__veil"></span>' +
+            /* Grade and altitude ride at the top, in their own chip. Set on one
+               line with the name and the price they collided with the price the
+               moment a grade ran long - "Moderate - Difficult" does. */
+            '<span class="tband__top">' +
+              '<span class="tband__n">' + String(i + 1).padStart(2, '0') + '</span>' +
+              '<span class="tband__grade">' + MT.esc(t.grade) + ' · ' +
+                MT.esc(t.altitude) + '</span>' +
             '</span>' +
-          '</span>' +
-        '</a>';
+            '<span class="tband__foot">' +
+              '<span class="tband__name">' + MT.esc(t.name) + '</span>' +
+              '<span class="tband__price">' + MT.esc(t.price) +
+                '<small>' + MT.esc(t.duration) + '</small></span>' +
+            '</span>' +
+          '</a>' +
+        '</li>';
     }).join('');
 
+    var wrap = document.createElement('div');
+    wrap.className = 'mt-stack';
     wrap.innerHTML =
-      '<div class="mt-carousel__head">' +
+      '<div class="mt-stack__head">' +
         '<h2>The trails</h2>' +
         '<span class="count">Four routes</span>' +
       '</div>' +
-      '<div class="mt-carousel__rail">' + cards + '</div>' +
-      '<div class="mt-carousel__dots">' +
-        treks.map(function(t, i){
-          return '<button type="button" aria-label="Go to ' + MT.esc(t.name) + '"' +
-            (i === 0 ? ' aria-selected="true"' : ' aria-selected="false"') + '></button>';
-        }).join('') +
-      '</div>';
-
+      '<ul class="mt-stack__list">' + bands + '</ul>';
     track.appendChild(wrap);
-
-    var rail = wrap.querySelector('.mt-carousel__rail');
-    var dots = Array.prototype.slice.call(wrap.querySelectorAll('.mt-carousel__dots button'));
-    var items = Array.prototype.slice.call(rail.querySelectorAll('.mt-card'));
-
-    dots.forEach(function(d, i){
-      d.addEventListener('click', function(){
-        items[i].scrollIntoView({ behavior: REDUCED_Q.matches ? 'auto' : 'smooth', block: 'nearest', inline: 'center' });
-      });
-    });
-
-    /* Track the centred card without a scroll handler. */
-    var seen = new IntersectionObserver(function(entries){
-      entries.forEach(function(e){
-        if(!e.isIntersecting) return;
-        var i = items.indexOf(e.target);
-        if(i < 0) return;
-        dots.forEach(function(d, j){ d.setAttribute('aria-selected', j === i ? 'true' : 'false'); });
-      });
-    }, { root: rail, threshold: 0.6 });
-    items.forEach(function(el){ seen.observe(el); });
   }
 
   /* ---------- desktop: cinematic slider (unchanged behaviour) ---------- */

@@ -366,71 +366,86 @@ em{font-style:italic;color:var(--accent-deep)}
   transition:opacity .45s var(--ease) calc(60ms + var(--i,0) * 45ms),
              transform .45s var(--ease) calc(60ms + var(--i,0) * 45ms)}
 
-/* ---- mobile treks carousel (stands in for the slider under 900px) ---- */
-.mt-carousel{padding:clamp(74px,12vw,96px) 0 clamp(40px,8vw,64px)}
-.mt-carousel__head{
-  display:flex;align-items:baseline;justify-content:space-between;gap:16px;
-  padding:0 clamp(20px,6vw,40px) 20px}
-.mt-carousel__head h2{
-  font-size:clamp(1.9rem,7.5vw,2.6rem);line-height:1;
-  letter-spacing:-.02em;color:var(--ink)}
-.mt-carousel__head .count{
-  font-size:.68rem;letter-spacing:.24em;text-transform:uppercase;
-  color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.mt-carousel__rail{
-  display:flex;gap:14px;overflow-x:auto;overscroll-behavior-x:contain;
-  scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
-  padding:4px clamp(20px,6vw,40px) 22px;
-  scrollbar-width:none}
-.mt-carousel__rail::-webkit-scrollbar{display:none}
+/* ---- mobile trails stack (stands in for the slider under 900px) ----
+   Four bands, not a swipeable rail. A rail put one trail on screen and the
+   other three off the side of it, so three of the four went unnamed unless you
+   thought to swipe; these are the whole point of the page.
 
-.mt-card{
-  flex:0 0 78vw;max-width:340px;scroll-snap-align:center;
-  background:var(--surface);border:1px solid var(--line);
+   --band-h is the arithmetic that keeps the promise: the screen, less the
+   chrome above and below AND the fixed header the section scrolls in under,
+   divided by four. So all four names and the heading land in one screen on a
+   tall phone and on a small one alike. svh, not vh, so the sum still holds
+   while the browser chrome is showing - which is the tightest case. */
+.mt-stack{
+  --chrome:214px;                  /* header + paddings + heading + three gaps */
+  --band-h:clamp(96px, calc((100svh - var(--chrome)) / 4), 190px);
+  padding:clamp(26px,7vw,44px) clamp(20px,6vw,40px) clamp(28px,6vw,40px)}
+.mt-stack__head{
+  display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+  padding-bottom:16px}
+.mt-stack__head h2{
+  font-size:clamp(1.8rem,7vw,2.6rem);line-height:1;
+  letter-spacing:-.02em;color:var(--ink)}
+.mt-stack__head .count{
+  font-size:.68rem;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--muted);white-space:nowrap}
+.mt-stack__list{list-style:none;display:grid;gap:10px}
+
+.tband__a{
+  position:relative;display:block;
+  height:var(--band-h);
   border-radius:var(--card-radius);overflow:hidden;
+  background:var(--bg-2);
   box-shadow:var(--shadow-sm);
   -webkit-tap-highlight-color:transparent;
-  transition:transform .4s var(--ease)}
-.mt-card:active{transform:scale(.985)}
-.mt-card__media{position:relative;aspect-ratio:4/5;background:var(--bg-2);overflow:hidden}
-.mt-card__media img{width:100%;height:100%;object-fit:cover}
-.mt-card__grade{
-  position:absolute;top:12px;left:12px;
-  background:rgba(20,14,6,.55);backdrop-filter:blur(6px);
-  color:#fff7ea;font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;
-  padding:6px 11px;border-radius:30px}
-.mt-card__alt{
-  position:absolute;right:12px;bottom:12px;color:#fff7ea;
-  font-family:'Fraunces',serif;font-size:1.05rem;
-  text-shadow:0 2px 12px rgba(0,0,0,.6);font-variant-numeric:tabular-nums}
-.mt-card__body{padding:18px 18px 20px}
-.mt-card__name{
-  font-size:1.5rem;line-height:1.08;letter-spacing:-.015em;
-  color:var(--ink);font-optical-sizing:auto}
-.mt-card__tag{
-  margin-top:8px;color:var(--ink-soft);font-size:.9rem;line-height:1.45;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.mt-card__foot{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-  margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
-.mt-card__price{
-  font-family:'Fraunces',serif;font-size:1.15rem;color:var(--ink);
-  font-variant-numeric:tabular-nums}
-.mt-card__price small{
-  display:block;font-family:'Manrope',sans-serif;font-size:.68rem;
-  color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
-.mt-card__cta{font-size:.84rem;font-weight:600;color:var(--accent-deep);white-space:nowrap}
+  transition:transform .35s var(--ease)}
+.tband__a:active{transform:scale(.985)}
+.tband__a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.tband__media{position:absolute;inset:0}
+.tband__media img{width:100%;height:100%;object-fit:cover;object-position:center 42%}
+/* Four bands cut from four photographs would otherwise all sit at the same
+   height in their frame, which reads as a template rather than as a set. */
+.tband:nth-child(2n) .tband__media img{object-position:center 58%}
 
-.mt-carousel__dots{display:flex;justify-content:center;gap:8px;padding-top:2px}
-.mt-carousel__dots button{
-  -webkit-appearance:none;appearance:none;border:0;background:none;
-  width:28px;height:28px;padding:0;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  -webkit-tap-highlight-color:transparent}
-.mt-carousel__dots button::after{
-  content:'';width:6px;height:6px;border-radius:50%;
-  background:var(--line);transition:background .3s,transform .3s var(--ease)}
-.mt-carousel__dots button[aria-selected="true"]::after{background:var(--accent);transform:scale(1.5)}
+/* All the type sits along the foot of the band, so that is where the weight
+   goes. A left-to-right wash was the first attempt and it left the price
+   stranded over bright sky on two of the four photographs. */
+.tband__veil{
+  position:absolute;inset:0;
+  background:
+    linear-gradient(0deg,
+      rgba(8,12,6,.88) 0%, rgba(8,12,6,.62) 30%,
+      rgba(8,12,6,.16) 66%, rgba(8,12,6,.06) 100%),
+    linear-gradient(180deg, rgba(8,12,6,.34) 0%, rgba(8,12,6,0) 46%)}
+
+.tband__top{
+  position:absolute;top:12px;left:14px;right:14px;z-index:1;
+  display:flex;align-items:center;gap:10px;min-width:0}
+.tband__n{
+  flex:0 0 auto;font-size:.6rem;letter-spacing:.26em;
+  color:rgba(255,236,208,.85);font-variant-numeric:tabular-nums}
+.tband__grade{
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;
+  color:rgba(247,236,214,.92)}
+
+.tband__foot{
+  position:absolute;bottom:12px;left:14px;right:14px;z-index:1;
+  display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.tband__name{
+  min-width:0;
+  font-family:'Fraunces',Georgia,serif;font-optical-sizing:auto;font-weight:500;
+  font-size:clamp(1.2rem,5.6vw,1.7rem);line-height:1.05;letter-spacing:-.015em;
+  color:#fff7ea;text-shadow:0 2px 14px rgba(0,0,0,.5)}
+.tband__price{
+  flex:0 0 auto;text-align:right;
+  font-family:'Fraunces',serif;font-size:1.02rem;color:#fff7ea;
+  font-variant-numeric:tabular-nums;text-shadow:0 2px 12px rgba(0,0,0,.55)}
+.tband__price small{
+  display:block;margin-top:3px;
+  font-family:'Manrope',sans-serif;font-size:.56rem;
+  letter-spacing:.12em;text-transform:uppercase;
+  color:rgba(247,236,214,.82)}
 
 @media(max-width:900px){
   /* --- header --- */
